@@ -2,6 +2,8 @@
 # python helloworld_python.py
 
 from threading import Thread
+from threading import Lock
+
 
 i = 0
 
@@ -14,12 +16,19 @@ def adder():
 # while in Python 3 this is an iterable (which is much faster to generate).
 # In python 2, an iterable is created with xrange()
     for x in range(0, 999999):
+    	with mtx:     
         	i += 1
 
 def adder2():
 	global i
+
+
 	for x in range(0, 1000000):
+		mtx.acquire()
 		i -= 1
+		mtx.release()
+
+mtx = Lock()
 
 def main():
 	
