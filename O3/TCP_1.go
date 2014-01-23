@@ -12,8 +12,7 @@ func readMsg(conn Conn) {
 		data := make([]byte, 1024)
 		_, err = conn.Read(data)
 		checkError(err, "readError")
-		msg := string(data[:])
-		println(msg)
+		println(string(data))
 	}
 }
 
@@ -30,12 +29,16 @@ func checkError(err error, errorMsg string) {
 }
 
 func main() {
-	//Dialup := "Connect to: 129.241.187.161:33546"
+	//part1	funker
 	conn, err := Dial("tcp", "129.241.187.161:33546")
 	checkError(err, "dialupError")
-
+	writeMsg(conn, "\nFakka yuu devil machine!!!\x00")
 	readMsg(conn)
 
-	conn.Close()
+	//part2 under arbeid
+	Dialup := "\nConnect to: 129.241.187.148:33546\x00"
+	writeMsg(conn, Dialup)
+	readMsg(conn)
 
+	
 }
