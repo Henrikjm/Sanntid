@@ -5,6 +5,7 @@ package main
 import (
 	. "fmt"
 	. "net"
+	"time"
 
 )
 
@@ -16,37 +17,9 @@ func readMsg(conn Conn) {
 		_, err := conn.Read(data)
 		checkError(err, "readError")
 		Println(string(data))
-		
-		
-	
 }
 
-func readSimon(conn Conn) {
-	
-		data := make([]byte, 1024)
-		_, err := conn.Read(data)
-		checkError(err, "readError")
-		sub := string(data)
-		simon := "Simon says "
-		println(sub)
 
-		equal := true
-
-		for i :=0; i<len(simon) ; i++{
-			if simon[i] != sub[i]{
-				equal = false
-			}		
-		}	
-		
-		println(sub)		
-	
-		if equal == true{
-			_, err = conn.Write(data)			
-			//writeMsg(conn, sub)
-		}		
-	}
-		
-	
 
 
 func writeMsg(conn Conn, msg string) {
@@ -61,37 +34,49 @@ func checkError(err error, errorMsg string) {
 	}
 }
 
+func readSimon(conn Conn) {
+		data := make([]byte, 1024)
+		_, err := conn.Read(data)
+		checkError(err, "readError")
+		sub := string(data)
+		Println(sub)
+		simon := "Simon says "
+		Println(sub[len(simon):])
+		if sub[0:len(simon)] == simon{
+			sub = sub[len(simon):]
+			Println(sub)			
+			writeMsg(conn, sub)
+		return
+		}
+		Println("no match")
+		writeMsg(conn, "")
+
+}
+		
+	
 
 
 func main() {
 	//part1	
 	conn, err := Dial("tcp", "129.241.187.161:33546")
 	checkError(err, "dialupError")
-	writeMsg(conn, "\nPart 1\n \x00")
+	writeMsg(conn, "\nPart 1 check\n \x00")
 	readMsg(conn)
 
 	//part2
-	
-
-	listener, err := Listen("tcp", "0:33500")
-	checkError(err, "ListenError")	
-	writeMsg(conn, "Connect to: 129.241.187.148:33500\x00")
+	listener, err := Listen("tcp", ":33504") //må endre port iblant (når panic:)
+	checkError(err, "ListenError")
+	writeMsg(conn, "Connect to: 129.241.187.151:33504\x00") //må endres hvis man sitter på ny PC
 	channel, err := listener.Accept()
 	checkError(err, "AcceptError")
 	readMsg(channel)
+	writeMsg(channel, "\nPart2 check\x00")
+	readMsg(channel)
+	
+	//part3
 	writeMsg(channel, "Play Simon says\x00")
-
-
 	for{
-	
-		//time.Sleep(3 * time.Second)
-		//writeMsg(channel,"Hello from client!\x00")
-
-		
+		time.Sleep(1 * time.Second)	
 		readSimon(channel)
-		
-		
 	}
-
-	
 }
