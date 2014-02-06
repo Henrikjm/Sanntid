@@ -1,31 +1,31 @@
-package elevdriver
+package elev_driver
 
-/*
-#cgo LDFLAGS: -lcomedi -lm
-#include "io.h"
-*/
+//#cgo LDFLAGS: -lcomedi -lm
+//#include "io.h"
 import "C"
 
-func ioInit() bool {
-	return bool(int(C.io_init()) != 1)
+func IoInit() bool {
+	return int(C.io_init()) != 1
 }
 
-func Set_bit(channel int) {
+func SetBit(channel int) {
 	C.io_set_bit(C.int(channel))
 }
 
-func Clear_bit(channel int) {
+func ClearBit(channel int) {
 	C.io_clear_bit(C.int(channel))
 }
 
-func Write_analog(channel, value int) {
-	C.io_write_analog(C.int(channel), C.int(value))
-}
-
-func Read_bit(channel int) bool {
+func ReadBit(channel int) bool {
 	return int(C.io_read_bit(C.int(channel))) != 0
 }
 
-func Read_analog(channel int) int {
+//Used solely for setting motorspeed
+func WriteAnalog(channel, value int) {
+	C.io_write_analog(C.int(channel), C.int(value))
+}
+
+//Used solely for reading motor speed
+func ReadAnalog(channel int) int {
 	return int(C.io_read_analog(C.int(channel)))
 }
