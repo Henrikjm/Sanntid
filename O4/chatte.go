@@ -3,14 +3,15 @@ package main
 import(
 	."fmt"
 	."net"
+	"bufio"
+	"os"
+	"strings"
 )
 
-var err error
-var chanCon chan *UDPConn
+
 
 func ListenToNetwork(chanCon chan *UDPConn){
 	Println("Start UDP server")
-
 	udpAddr, err := ResolveUDPAddr("udp4", ":20666") //resolving
 	if err != nil{
 		println("ERROR: Resolving error")
@@ -20,27 +21,29 @@ func ListenToNetwork(chanCon chan *UDPConn){
 		println("ERROR: Listening error")
 	}
    chanCon <- conn
-	data := make([]byte,1024)
 	for{
+		data := make([]byte,1024)
 		_, addr, err := conn.ReadFromUDP(data) //kan bruke addr til å sjekke hvor melding kommer fra f.eks if addr not [egen i.p]
 		if err != nil{
 			println("ERROR: while reading")
 		}
-		Println("Recieved from: ", addr,"\nMessage: ",string(data))
+		if addr.IP.String() != "129.241.187.148"{
+			Println("Homofil_mann_22: ",string(data))
+		}
 	}	
 }
 
 func SendToNetwork(chanCon chan *UDPConn){
-   sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:20018") //Spesifiserer adresse
+    sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:20666") //Spesifiserer adresse
 	//connection,err := DialUDP("udp",nil, sendAddr) //setter opp "socket" for sending
 	if err != nil {
 		println("ERROR while resolving UDP addr")
 	}
 	connection := <- chanCon
+	reader := bufio.NewReader(os.Stdin)
 	for{
-		var(inn string)
-		_,_ = Scanf("&d",inn)
-		testmsg := []byte("testing")
+		text, _ := reader.ReadString('\n')
+		testmsg := []byte(strings.TrimSpace(text))
 		if connection ==  nil{
 			println("ERROR, connection = nil")
 		}	
@@ -52,14 +55,12 @@ func SendToNetwork(chanCon chan *UDPConn){
 
 func main(){
 
-var(shit string)
-for{
-	Scanf(shit)
-	println(shit)
-}
-/*chanCon := make(chan *UDPconn, 1)
+//host, _ := os.Hostname()
+//addrs, _ := LookupIP()
+//println(addrs)
+chanCon := make(chan *UDPConn,1)
 go ListenToNetwork(chanCon)
-go SendToNetwork(chanCon)
-*/
+SendToNetwork(chanCon)
+
 
 }
