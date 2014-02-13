@@ -2,7 +2,7 @@
 //
 // 2006, Martin Korsgaard
 
-package driver
+package main
 
 
 
