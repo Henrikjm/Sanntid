@@ -1,0 +1,12 @@
+
+package main
+
+import(
+   ."fmt"
+   "hello"
+   )
+   
+
+func main(){
+   Println(string.Reverse("FUcka Yuu"))
+}

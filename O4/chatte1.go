@@ -1,4 +1,4 @@
-package networkIO
+package main
 
 import(
 	."fmt"
@@ -61,3 +61,14 @@ func CheckError(err error, errorMsg string) {
 	}
 }
 
+
+func main(){
+
+
+  chanCon := make(chan *UDPConn,1)
+  go ListenToNetwork(chanCon, "inf", "20667")
+  SendToNetwork(chanCon, "20667", "writeFromConsole")
+  //Println(ord)
+  
+
+}
