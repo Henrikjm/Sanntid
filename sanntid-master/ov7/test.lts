@@ -1,0 +1,1 @@
+MOVE = (north->(south->MOVE|north->STOP)).

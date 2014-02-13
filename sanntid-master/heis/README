@@ -1,0 +1,8 @@
+We have used modern google-go tools extensively throughout the project. We have used GIT as an RCS. Our main repository is publicly available at https://github.com/anlif/sanntid (this may have lead to some plagiarism by others)
+
+Read documentation at http://godoc.org/github.com/anlif/sanntid/heis
+
+To get, build and run the project in current directory:
+export GOPATH=`pwd`
+go get github.com/anlif/sanntid/heis
+./bin/heis

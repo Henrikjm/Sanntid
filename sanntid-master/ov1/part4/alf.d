@@ -1,0 +1,1 @@
+alf.o: alf.c

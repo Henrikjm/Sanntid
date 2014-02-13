@@ -1,0 +1,2 @@
+TWOCOIN = (pick -> TRICK),
+TRICK = (toss -> heads -> TRICK).
