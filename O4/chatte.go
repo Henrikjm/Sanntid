@@ -20,7 +20,7 @@ func ListenToNetwork(chanCon chan *UDPConn){
 	if err != nil{
 		println("ERROR: Listening error")
 	}
-   chanCon <- conn
+   	chanCon <- conn
 	for{
 		data := make([]byte,1024)
 		_, addr, err := conn.ReadFromUDP(data) //kan bruke addr til å sjekke hvor melding kommer fra f.eks if addr not [egen i.p]
@@ -55,9 +55,9 @@ func SendToNetwork(chanCon chan *UDPConn){
 
 func main(){
 
-//host, _ := os.Hostname()
-//addrs, _ := LookupIP()
-//println(addrs)
+host, _ := os.Hostname()
+addrs, _ := LookupIP()
+println(addrs)
 chanCon := make(chan *UDPConn,1)
 go ListenToNetwork(chanCon)
 SendToNetwork(chanCon)
