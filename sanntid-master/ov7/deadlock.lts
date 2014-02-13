@@ -1,7 +1,0 @@
-P1 = (p1wa->p1wb->p1sb->p1sa->P1).
-P2 = (p2wb->p2wa->p2sa->p2sb->P2).
-SA = (p1wa->p1sa->SA
-	| p2wa->p2sa->SA).
-SB = (p1wb->p1sb->SB
-	| p2wb->p2sb->SB).
-||P = (P1||P2).
