@@ -21,3 +21,4 @@ func main() {
 	fmt.Printf("in all caps: %q\n", out.String())
 }
 
+}
