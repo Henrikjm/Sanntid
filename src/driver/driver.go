@@ -117,7 +117,7 @@ func ClearAllOrderLights() {
 
 func SetDoorOpenLight() { SetBit(DOOR_OPEN) }
 func SetStopLight()     { SetBit(LIGHT_STOP) }
-func SetOrderLight(floor int, dir int) {
+func SetOrderLight(floor int, dir OrderDir) {
 	switch {
 	case floor == 1 && dir == ORDER_UP:
 		SetBit(LIGHT_UP1)
