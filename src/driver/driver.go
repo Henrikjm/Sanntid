@@ -164,6 +164,6 @@ func GetObstruction() { ReadBit(OBSTRUCTION) }
 func GetOrderButton() {
 
 }
-func ReadFloor() int {
+func ReadFloor() {
 
 }
