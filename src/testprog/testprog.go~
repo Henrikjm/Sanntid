@@ -7,6 +7,9 @@ import (
 )
 
 func main() {
+	fmt.Println(driver.MOTORDIR)
+	fmt.Println(driver.MOTOR)
+
 	driver.IoInit()
 	driver.SetBit(driver.LIGHT_STOP)
 	driver.SetBit(driver.LIGHT_COMMAND1)
