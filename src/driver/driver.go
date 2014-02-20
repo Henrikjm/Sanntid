@@ -159,9 +159,9 @@ func SetFloorIndicatorLight(floor int) {
 }
 
 //READS
-func GetStopButton() int  { return ReadBit(STOP) }
-func GetObstruction() int { return ReadBit(OBSTRUCTION) }
-func GetOrderButton() int {
+func GetStopButton()  { ReadBit(STOP) }
+func GetObstruction() { ReadBit(OBSTRUCTION) }
+func GetOrderButton() {
 
 }
 func ReadFloor() int {
