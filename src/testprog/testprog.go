@@ -2,8 +2,8 @@ package main
 
 import (
 	"driver"
-	"time"
 	"fmt"
+	"time"
 )
 
 func main() {
