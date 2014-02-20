@@ -144,17 +144,17 @@ func SetOrderLight(floor int, dir OrderDir) {
 func SetFloorIndicatorLight(floor int) {
 	switch floor {
 	case 1:
-		Clear_bit(FLOOR_IND1)
-		Clear_bit(FLOOR_IND2)
+		ClearBit(FLOOR_IND1)
+		ClearBit(FLOOR_IND2)
 	case 2:
-		Clear_bit(FLOOR_IND1)
-		Set_bit(FLOOR_IND2)
+		ClearBit(FLOOR_IND1)
+		SetBit(FLOOR_IND2)
 	case 3:
-		Set_bit(FLOOR_IND1)
-		Clear_bit(FLOOR_IND2)
+		SetBit(FLOOR_IND1)
+		ClearBit(FLOOR_IND2)
 	case 4:
-		Set_bit(FLOOR_IND1)
-		Set_bit(FLOOR_IND2)
+		SetBit(FLOOR_IND1)
+		SetBit(FLOOR_IND2)
 	}
 }
 
