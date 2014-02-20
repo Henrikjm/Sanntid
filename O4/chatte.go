@@ -27,14 +27,14 @@ func ListenToNetwork(chanCon chan *UDPConn){
 		if err != nil{
 			println("ERROR: while reading")
 		}
-		if addr.IP.String() != "129.241.187.148"{
+		//if addr.IP.String() != "129.241.187.148"{
 			Println("Homofil_mann_22: ",string(data))
-		}
+		//}
 	}	
 }
 
 func SendToNetwork(chanCon chan *UDPConn){
-    sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:20666") //Spesifiserer adresse
+    	sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:20666") //Spesifiserer adresse
 	//connection,err := DialUDP("udp",nil, sendAddr) //setter opp "socket" for sending
 	if err != nil {
 		println("ERROR while resolving UDP addr")

@@ -14,7 +14,7 @@ func ListenToNetwork(chanCon chan *UDPConn, setting string, port string) string{
 	CheckError(err, "ERROR: Resolving error")
 	conn, err := ListenUDP("udp", udpAddr) //initiating listening
 	CheckError(err, "ERROR: Listening error")
-   chanCon <- conn
+   	chanCon <- conn
 	for{
 		data := make([]byte,1024)
 		_, _, err := conn.ReadFromUDP(data) //kan bruke addr til å sjekke hvor melding kommer fra f.eks if addr not [egen i.p]
@@ -28,7 +28,7 @@ func ListenToNetwork(chanCon chan *UDPConn, setting string, port string) string{
 }
 
 func SendToNetwork(chanCon chan *UDPConn, port string, msg string){
-   sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:" + port) //Spesifiserer adresse
+   	sendAddr, err := ResolveUDPAddr("udp4","129.241.187.255:" + port) //Spesifiserer adresse
 	CheckError(err, "ERROR while resolving UDP addr")
 	connection := <- chanCon
 	print("does it work?")
@@ -65,9 +65,9 @@ func CheckError(err error, errorMsg string) {
 func main(){
 
 
-  chanCon := make(chan *UDPConn,1)
+  chanCon := make(chan *UDPConn,0)
   go ListenToNetwork(chanCon, "inf", "20667")
-  SendToNetwork(chanCon, "20667", "writeFromConsole")
+  SendToNetwork(chanCon, "20667", "hello hello")
   //Println(ord)
   
 
