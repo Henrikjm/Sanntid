@@ -9,8 +9,8 @@ func main() {
 	SetBit(MOTORDIR)
 	WriteAnalog(MOTOR, 100)
 	time.Sleep(2 * time.Second)
-	WriteAnalog(Motor, -100)
+	WriteAnalog(MOTOR, -100)
 	time.Sleep(2 * time.Second)
-	WriteAnalog(Motor, 0)
+	WriteAnalog(MOTOR, 0)
 	ClearBit(MOTORDIR)
 }
