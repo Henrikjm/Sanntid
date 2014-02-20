@@ -52,7 +52,7 @@ func MotorControl() {
 			SetBit(MOTORDIR)
 			time.Sleep(time.Millisecond * 10)
 			WriteAnalog(MOTOR, MINSPEED)
-		} else if (newDir == MOVE_STOP) && (currenDir == MOVE_DOWN) {
+		} else if (newDir == MOVE_STOP) && (currentDir == MOVE_DOWN) {
 			ClearBit(MOTORDIR)
 			time.Sleep(time.Millisecond * 10)
 			WriteAnalog(MOTOR, MINSPEED)
@@ -117,7 +117,7 @@ func ClearAllOrderLights() {
 
 func SetDoorOpenLight() { SetBit(DOOR_OPEN) }
 func SetStopLight()     { SetBit(LIGHT_STOP) }
-func SetOrderLight() {
+func SetOrderLight(floor int, dir int) {
 	switch {
 	case floor == 1 && dir == ORDER_UP:
 		SetBit(LIGHT_UP1)
