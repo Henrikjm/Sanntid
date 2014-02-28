@@ -23,4 +23,7 @@ func main() {
 	driver.ClearBit(driver.LIGHT_STOP)
 	driver.ClearBit(driver.LIGHT_COMMAND1)
 	driver.ClearBit(driver.LIGHT_DOWN2)
+
+	driver.IoInit()
+
 }

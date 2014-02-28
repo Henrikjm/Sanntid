@@ -31,7 +31,9 @@ const (
 func InitElev() {
 	ClearAllLights()
 	motorChannel = make(chan MoveDir)
+
 	go MotorControl()
+
 	for {
 		motorChannel <- MOVE_DOWN
 		time.Sleep(time.Second * 1)
@@ -40,6 +42,10 @@ func InitElev() {
 		motorChannel <- MOVE_STOP
 		time.Sleep(time.Second * 1)
 	}
+}
+
+func monitor() {
+
 }
 
 func MotorControl() {
@@ -68,8 +74,6 @@ func MotorControl() {
 		currentDir = newDir
 	}
 }
-
-//LIGHTS
 
 func ClearAllLights() {
 	ClearAllOrderLights()
@@ -102,6 +106,7 @@ func ClearOrderLight(floor int, dir OrderDir) {
 		ClearBit(LIGHT_COMMAND4)
 	}
 }
+
 func ClearAllOrderLights() {
 	ClearOrderLight(1, ORDER_UP)
 	ClearOrderLight(2, ORDER_UP)
@@ -141,6 +146,7 @@ func SetOrderLight(floor int, dir OrderDir) {
 		SetBit(LIGHT_COMMAND4)
 	}
 }
+
 func SetFloorIndicatorLight(floor int) {
 	switch floor {
 	case 1:
@@ -161,9 +167,5 @@ func SetFloorIndicatorLight(floor int) {
 //READS
 func GetStopButton()  { ReadBit(STOP) }
 func GetObstruction() { ReadBit(OBSTRUCTION) }
-func GetOrderButton() {
-
-}
-func ReadFloor() {
-
-}
+func GetOrderButton() {}
+func ReadFloor()      {}
