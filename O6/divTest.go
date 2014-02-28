@@ -1,23 +1,25 @@
-
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"log"
+
+	."fmt"
 	"os/exec"
-	"strings"
 )
 
 func main() {
-	cmd := exec.Command("tr", "a-z", "A-Z")
-	cmd.Stdin = strings.NewReader("some input")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
+	// i := 0
+	// select{
+	// case i = 0:
+	// 	Println("check")
+	// default:
+	// 	Println("poopcheck")
+	// }
+	i := 0
+	if i == 0{
+		Println("kek")
+	}else{
+		Println("vet ikke")
 	}
-	fmt.Printf("in all caps: %q\n", out.String())
+	cmd := exec.Command("mate-terminal", "-x")
+	cmd.Run()
 }
-
