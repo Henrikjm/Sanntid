@@ -21,7 +21,7 @@ func ImAlive(port string) {
 	conn, err := DialUDP("udp4", nil, sendAddr)
 	CheckError(err, "ERROR while dialing")
 	for {
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Millisecond * 100)
 		conn.Write([]byte("I Am Alive!"))
 	}
 }
@@ -41,15 +41,7 @@ func GetLocalIp() *string {
 	return &strings.Split(conn.LocalAddr().String(), ":")[0]
 }
 
-func ListenToNetwork(port string, incoming chan string) {
-	udpAddr, err := ResolveUDPAddr("udp4", ":"+port)
-	CheckError(err, "ERROR while resolving UDPaddr for ListenToNetwork")
-	fmt.Println("Establishing ListenToNetwork")
-
-	conn, err := ListenUDP("udp4", udpAddr)
-	fmt.Println("Listening on port ", udpAddr.String())
-	CheckError(err, "Error while establishing listening connection")
-	
+func ListenToNetwork(conn *UDPConn, incoming chan string) {
 	data := make([]byte, 1024)
 	//ownAddr := *GetLocalIp();
 	for {
@@ -59,36 +51,29 @@ func ListenToNetwork(port string, incoming chan string) {
 		if err != nil{
 			data = []byte("connection is dead")
 		}
-		fmt.Println("Channeling data " + string(data))
+		fmt.Println("ListenToNetwork: Channeling data :" + string(data))
 		incoming <- string(data)
 	}
 	conn.Close()
 }
 
-func ListenToNetworkTimeLimited(port string, outgoing chan string, timeLimit int) {
-	udpAddr, err := ResolveUDPAddr("udp4", ":"+port)
-	CheckError(err, "ERROR while resolving UDPaddr for ListenToNetwork")
-	fmt.Println("Establishing ListenToNetwork")
-
-	conn, err := ListenUDP("udp4", udpAddr)
-	fmt.Println("Listening on port ", udpAddr.String())
-	CheckError(err, "Error while establishing listening connection")
-
-	conn.SetReadDeadline( time.Now().Add(time.Duration(timeLimit) * time.Millisecond) )
-	
+func ListenToNetworkTimeLimited(conn *UDPConn, outgoing chan string, timeLimit int) {
 	data := make([]byte, 1024)
 	//ownAddr := *GetLocalIp();
 	for {
+		conn.SetReadDeadline( time.Now().Add(time.Duration(timeLimit) * time.Millisecond) )
 		_, _, err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR ReadFromUDP")
 		//if addr.String() == ownAddr{ //OBS
 		if err != nil{
 			fmt.Println("Channeling data: connection is dead")
-			outgoing <- "connection is dead"
+			go func(outgoing chan string){
+				outgoing <- "connection is dead"
+			}(outgoing)
 			fmt.Println("Backup: Breaking listen-loop")
 			break
 		}
-		fmt.Println("Channeling data " + string(data))
+		//fmt.Println("Channeling data: " + string(data))
 		outgoing <- string(data)
 		//}
 
@@ -97,42 +82,61 @@ func ListenToNetworkTimeLimited(port string, outgoing chan string, timeLimit int
 }
 
 
+func MakeListenerConn(port string) *UDPConn{
+	udpAddr, err := ResolveUDPAddr("udp4", ":"+port)
+	CheckError(err, "ERROR while resolving UDPaddr for ListenToNetwork")
+	fmt.Println("Establishing ListenToNetwork")
+	conn, err := ListenUDP("udp4", udpAddr)
+	fmt.Println("Listening on port ", udpAddr.String())
+	CheckError(err, "Error while establishing listening connection")
+	return conn
+}
+
 
 //BACKUP PROGRAM
 func main(){
+	//Initializing variables and Listening channels
 	var(
 		update string
 		count string
 	)
-
 	alivePort := "26030"
+	aliveConn := MakeListenerConn(alivePort)
 	countPort := "26032"
-	
+	countConn := MakeListenerConn(countPort)
 	incoming := make(chan string)
 	countChan := make(chan string)
-	go ListenToNetworkTimeLimited(alivePort, incoming, 2000)
-	go ListenToNetwork(countPort, countChan)
+	go ListenToNetworkTimeLimited(aliveConn, incoming, 500) //receiving alivemsg
+	go ListenToNetwork(countConn, countChan) // receiving count
 
-	for{
-		select{
-		case update = <- incoming:
-			fmt.Println("Backup: Recieved ",update)
-			if update == "connection is dead"{//Må oppdage død counter
-				fmt.Println("Backup: Breaking for-loop")
-				break
+	//Updating and listening
+	count = func(incoming chan string, countChan chan string, count string) string{
+		for{
+			select{
+			case update = <- incoming:
+				//fmt.Println("Backup: Recieved ",update)
+				if update == "connection is dead"{//Må oppdage død counter
+					fmt.Println("You have entered the IF statement")
+					return count 
+				}
+			case count = <- countChan://Må oppdatere count
+				fmt.Println("Recieved: ",count)
+			
+			default:
 			}
-		case count = <- countChan://Må oppdatere count
-			fmt.Println("Recieved: ",count)
 		}
-	}
+	}(incoming, countChan, count)
+	countConn.Close()
+	aliveConn.Close()
 	
 	fmt.Println("Creating new Main")
 	cmd := exec.Command("mate-terminal", "-x", "go", "run", "main.go")
 	cmd.Run()
 
-	
-	select{
-		case update = <- incoming:
-			SendToNetwork(countPort, count)
+	fmt.Println("Count == ", count)
+	for i := 0; i<50; i++{
+		go SendToNetwork(countPort,count)
+		time.Sleep(time.Millisecond*1)
 	}
+	
 }
