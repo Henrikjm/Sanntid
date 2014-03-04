@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+const N_ELEVATORS int = 2
+
+type AliveArray [][]string
+
 func CheckError(err error, errorMsg string) {
 	if err != nil {
 		fmt.Println("!!Error type: " + errorMsg,"!!")
@@ -24,6 +28,35 @@ func ImAliveUDP(port string) {
 		time.Sleep(time.Millisecond * 300)
 		conn.Write([]byte(msg))
 	}
+}
+
+func RecieveAliveUDP(port string, aliveChan *chan string){
+	data := make([]byte, 1024)
+	
+	for {
+		_,addr,err := conn.ReadFromUDP(data)
+		CheckError(err,"ERROR ReadFromUDP")
+		aliveChan <- data
+		
+	}
+}
+
+func UpdateAliveUDP(aliveChan *chan string, newRequestChan *chan AliveArray){
+	//Oppdaterer alivearray ihht. nye meldinger
+	var workingArray AliveArray
+
+	for{
+		select{
+			case newAlive := <- *aliveChan:
+				//sjekk om newAlive er i array -> oppdater time, eller legg til ny med time
+			case <- newRequestChan:
+				newRequestChan <- 
+			default:
+				//sjekk etter døde maskiner
+		}
+	}
+	//Fjerner døde maskiner etter x tid
+	//Sender en array med alle koblingene dersom det blir forespurt
 }
 
 func SendToNetworkUDP(port string, msg string) {
@@ -69,3 +102,8 @@ func MakeListenerConn(port string) *net.UDPConn{
 	CheckError(err, "Error while establishing listening connection")
 	return conn
 }
+
+func NetworkHandler(){
+	
+}
+
