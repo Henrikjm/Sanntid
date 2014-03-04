@@ -1,11 +1,19 @@
 package main
 
 import (
-	"network"
+	//"network"
 	//"driver"
 	"fmt"
-	//"time"
+	"time"
+	"net"
+	"strings"
 )
+
+func GetLocalIp() *string {
+	conn, _ := net.Dial("udp4", "google.com:80")
+	//CheckError(err, "ERROR: LocalIp: dialing to google.com:80")
+	return &strings.Split(conn.LocalAddr().String(), ":")[0]
+}
 
 func main() {
 	/*go func(){
@@ -33,7 +41,7 @@ func main() {
 	driver.IoInit()
 	}()
 	*/
-	alivePort := "33042"
+	/*alivePort := "33042"
 	incoming := make(chan string)
 
 	go network.ImAliveUDP(alivePort)
@@ -44,4 +52,18 @@ func main() {
 		}
 	var exit string
 	fmt.Scanln(&exit)
+	*/
+	type Queue struct {
+		IP string
+		timeRef time.Time
+	}
+
+	
+	var workingVariable Queue
+	
+	workingVariable.IP = *GetLocalIp()
+	workingVariable.timeRef = time.Now()
+	fmt.Println("TimeNow = ", workingVariable.timeRef, "IP = ",workingVariable.IP)
+	
+	
 }
