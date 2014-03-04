@@ -1,0 +1,8 @@
+pakker:
+------------------
+networkIO:
+- ListenToNetwork(chanCon chan *UDPConn, setting string, port string) string
+setting == inf: gir kontinuerlig lytting/printing
+- SendToNetwork(chanCon chan *UDPConn, port string, msg string)
+msg == "writeFromConsole" sier seg selv
+------------------

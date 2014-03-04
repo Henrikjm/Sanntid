@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	."net"
-	"strings"
-	"time"
-	"strconv"
+	//."net"
+	//"strings"
+	//"time"
+	//"strconv"
 )
-
+/*
 func CheckError(err error, errorMsg string) {
 	if err != nil {
 		fmt.Println("!!Error type: " + errorMsg)
@@ -109,18 +109,29 @@ func MakeListenerConn(port string) Conn{
 }
 
 
-
+*/
 
 
 
 func main() {
-	i := "0"
-	i,_ = strconv.Atoi(i)
-	if i ==0{
-		fmt.Println("eh")
-		i = i+1
-	}else{
-		fmt.Println("hey")
+	/*variablelele := "8"
+	
+
+	i,_ := strconv.Atoi(variablelele)
+	fmt.Println("variablelele = ", variablelele,"i = ", i)*/
+
+	type lol struct{
+		i int
+		lol string
 	}
-	fmt.Println(i)
+
+	var kek lol
+
+	kek.i = 1
+	kek.lol = "bip"
+
+	data := []byte(kek.lol)
+	fmt.Println(data)
+
+
 }
