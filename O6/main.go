@@ -1,5 +1,4 @@
 package main
-
 import (
 	"fmt"
 	."net"
@@ -102,39 +101,29 @@ func main() {
 	alivePort := "26030"
 	countPort := "26032"
 	countConn := MakeListenerConn(countPort)
-	var i int
+	var continueCount string
 
 	go ImAlive(alivePort)
 	go ListenToNetworkTimeLimited(countConn, incoming, 500)
 
 
 	//Checks to see if there is old data in a backup
-	continueCount := <-incoming
-	/*
-	fmt.Println(continueCount)
-	if continueCount != "connection is dead"{
-		a, _ := strconv.Atoi(continueCount)
-		i = i + a
-		fmt.Println("string", continueCount, "int", i)
-	}else{		
-		i = 0
-	}
-	fmt.Println(i)
-	*/
-	fmt.Println(continueCount)
+	continueCount = <-incoming
+	
+	continueCount = strings.Trim(continueCount, "\x00")
+	i,_ := strconv.Atoi(continueCount)
+ 
 	if continueCount == "connection is dead"{
 		continueCount = "0"
 	}
-
-	i,_ = strconv.Atoi(continueCount)
-	fmt.Println("continueCount == ", continueCount, "i == ", i)
-
+	
 	//Makes a new backup 
 	countConn.Close()
 	fmt.Println("Creating backup")
 	cmd := exec.Command("mate-terminal", "-x", "go", "run", "backup.go")
 	cmd.Run()
-
+	
+	
 	//Counts and updates over UDP
 	go func(countPort string, i int){
 		for{

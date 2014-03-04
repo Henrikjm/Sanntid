@@ -134,7 +134,7 @@ func main(){
 	cmd.Run()
 
 	fmt.Println("Count == ", count)
-	for i := 0; i<50; i++{
+	for i := 0; i<500; i++{
 		go SendToNetwork(countPort,count)
 		time.Sleep(time.Millisecond*1)
 	}

@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	//."net"
-	//"strings"
+	"strings"
 	//"time"
 	"strconv"
 )
@@ -114,10 +114,10 @@ func MakeListenerConn(port string) Conn{
 
 
 func main() {
-	variablelele := "8"
 	
-
-	i,_ := strconv.Atoi(variablelele)
-	fmt.Println("variablelele = ", variablelele,"i = ", i)
+	variablelele := "8\x00"
+	variablelele = strings.Trim(variablelele,"\x00")
+	k,_ := strconv.Atoi(variablelele)
+	fmt.Println("variablelele = ", variablelele,"i = ", k)
 
 }
