@@ -121,7 +121,8 @@ func main() {
 	}
 	fmt.Println(i)
 	*/
-	if continueCount != "connection is dead"{
+	fmt.Println(continueCount)
+	if continueCount == "connection is dead"{
 		continueCount = "0"
 	}
 
