@@ -44,7 +44,12 @@ func InitElev() {
 	}
 }
 
-func monitor() {
+func MonitorIO(monitor chan){
+	
+
+}
+
+func MonitorElev(monitor chan){
 
 }
 
