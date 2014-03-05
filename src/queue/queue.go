@@ -37,7 +37,7 @@ type Elevator struct{
 	lastFloor int
 }
 
-type Order{
+type Order struct{
 	floor int
 	orientation OrderDir
 }
@@ -53,35 +53,57 @@ func GetElevNumber(elevators []Elevator)(int){
 
 //Compare order returns a value based on place in priority (& thus place in workQueue)
 //ASSUMES: that workQueue[0] is the current optimal priority
-func CompareOrder(workQueue []int, lastFloor int, order Order)(int){
+
+func InsertOrder(elevator *Elevator, order Order){
+	
+	workQueue := elevator.workQueue
+	lastFloor := elevator.lastFloor
+	var placement int
+
 	if order.floor == 0 {
 		Println("!!Error in CompareOrder ordered floor == 0")
 		return nil
 	}
+
 	for i := 0; i < N_FLOORS; i++{
 		
 		if workQueue[i] == 0 {
-			return i
+			placement = i
+			break
 
 		}else if order.direction == MOVE_UP{
 			if order.floor > lastFloor && workQueue[i] > order.floor{
-				return i
+				placement = i
+				break
 			}else if order.floor < lastFloor && workQueue[i] < order.floor {
-				return i
+				placement = i
+				break
 			}
 
 		}else if order.direction == MOVE_DOWN{
 			if order.floor < lastFloor && workQueue[i] < order.floor{
-				return i
+				placement = i
+				break
 			}else if order.floor > last.floor && workQueue[i] > order.floor{
-				return i
+				placement = i
+				break
 			}
 		}
 	}
 
+	for i := 0; i <N_FLOORS; i++{
+
+
+
+	}
+
+
+
+func calculateScore(elevator Elevator, order Order){
 
 
 }
+
 
 func InsertOrder(elevators []Elevator)[]Elevator{
 }
@@ -102,7 +124,10 @@ func HandleDeadElev(elevators []Elevator, deadIp string){}
 func main(){
 	emptyWorkQueue := make([]int, N_FLOORS)
 	var elevators [N_ELEVATORS]Elevator
-	var internalOrderChan, eksternalOrderChan chan Order
+
+	internalOrderChan := make(chan Order, 4)
+	eksternalOrderChan := make(chan Order, 6)
+	
 	var internalOrder, eksternalOrder Order
 	var elevStatusChan chan Elevator
 	var dummyElevator Elevator
