@@ -23,40 +23,47 @@ func ImAliveUDP(port string) {
 	CheckError(err, "ERROR while resolving UDP addr")
 	conn, err := net.DialUDP("udp4", nil, sendAddr)
 	CheckError(err, "ERROR while dialing")
-	msg := *GetLocalIp()
+	msg := "ImAlive!"
 	for {
 		time.Sleep(time.Millisecond * 300)
 		conn.Write([]byte(msg))
 	}
 }
 
-func RecieveAliveUDP(port string, aliveChan *chan string){
+func RecieveAliveUDP(alivePort string, aliveChan *chan map[string]time.Time){
 	data := make([]byte, 1024)
-	
-	for {
-		_,addr,err := conn.ReadFromUDP(data)
-		CheckError(err,"ERROR ReadFromUDP")
-		aliveChan <- data
-		
-	}
-}
+	ownAddr := *GetLocalIp();
+	conn := network.MakeListenerConn(alivePort)
+	for {		
+		_, addr_, err := conn.ReadFromUDP(data)
+		CheckError(err, "ERROR ReadFromUDP")
 
-func UpdateAliveUDP(aliveChan *chan string, newRequestChan *chan AliveArray){
-	//Oppdaterer alivearray ihht. nye meldinger
-	var workingArray AliveArray
-
-	for{
-		select{
-			case newAlive := <- *aliveChan:
-				//sjekk om newAlive er i array -> oppdater time, eller legg til ny med time
-			case <- newRequestChan:
-				newRequestChan <- 
-			default:
-				//sjekk etter døde maskiner
+		if (string(data) == "ImAlive!") && (addr.String() != ownAddr){
+			*aliveChan <- addr.String()//add/update alive map
 		}
 	}
-	//Fjerner døde maskiner etter x tid
-	//Sender en array med alle koblingene dersom det blir forespurt
+
+}
+
+func UpdateAliveUDP(aliveChan *chan string, updateChan *chan map[string]time.Time) {
+	for {
+		select{
+			case incomingIP := <-*aliveChan:
+				aliveMap[incomingIP] = time.Now()
+			case <-updateChan:
+				*updateChan<-aliveMap
+			default:
+				for i, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
+					if time.Now().Sub(value) > 500000000 {
+						delete(aliveMap, i)
+					}
+				}
+				if lengthOfMap != len(aliveMap) {
+					lengthOfMap = len(aliveMap)
+					*updateChan <- aliveMap
+				}
+		}
+	}
 }
 
 func SendToNetworkUDP(port string, msg string) {
