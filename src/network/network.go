@@ -6,12 +6,8 @@ import (
 	"time"
 	"strings"
 	"encoding/json"
-<<<<<<< HEAD
-	
-=======
 	".types"
->>>>>>> 02bce73356fd2c81974153a248e4bd35384fa1ea
-)
+
 
 const N_ELEVATORS int = 2
 
@@ -19,6 +15,8 @@ const (
 	ORDERPORT string = "44001"
 	ALIVEPORT string = "44002"
 	COSTPORT string = "44003"
+	ELEVATORPORT string = "44004"
+	ORDERCONFIRMATIONPORT string = "44005"
 )
 
 
@@ -126,45 +124,52 @@ func ListenToOrderUDP(conn *net.UDPConn, incoming *chan string) {
 	conn.Close()
 }
 
-func RecieveOrder(orderChannel chan Order) {
+func RecieveOrderFromUDP(newOrdersChan chan Order, chan costChan map[string]cost.Cost) { //Må beregne cost og sende ut
 	conn := MakeListenerConn(ORDERPORT)
 	data := make([]byte, 1024)
 	for {
-		_, _, err := conn.ReadFromUDP(data)
+		_, _, err := conn.ReadFromUDP(data) 	//motta ordre
 		CheckError(err, "ERROR ReadFromUDP")
-
+		
 		var newOrder Order
 		json.Unmarshal(newOrder, &data)
-		go func(order Order, orderChannel chan Order){
-			orderChannel <- newOrder
-		}(newOrder)
-
+		
+		for{
+			newOrdersChan <- newOrder //videresend ordre til costevaluering
+			if RecieveCost(newOrder ,costChan){ //Vent til all cost er mottat og så send dette til kømodul
+				break
+			}
+		}
 	}
-	//motta ordre
-	//videresend ordre
+	
+	
 	//bekreft mottat ordre
 }
 
-func SendOrder(order Order){
+func SendOrderToUDP(orderChannel chan Order, chan costChan map[string]cost.Cost){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
-
+	orderConfirmationChan := make(chan bool)
+	for{
+	order := <- orderChannel
+	go RecieveOrderConfirmation(orderConfirmationChan, order)
 	for  /*Should consider adding a limitation to # of tries*/{
 	orderB,_ := json.Marshal(order)
 	conn.Write([]byte(order))
 
-	if RecieveCost(){
+	if <-orderConfirmationChan{
 		break
 		}
 	}
-
-	conn.Close()
+	}
 }
 
-func SendCost(cost Cost) {
-
+func SendCost() {//IKKE FERDIG
+	//Recieve order
+	//Request cost evaluation
+	//Send cost to UDP
 }
 
-func RecieveCost(order Order, chan costChan map[string]cost.Cost) bool{
+func RecieveCost(order Order, recieveCostChan chan map[string]cost.Cost) bool{//IKKE FERDIG
 	conn := MakeListenerConn(COSTPORT)
 
 	//Oppdaterer liste over heiser som er tilkoblet
@@ -182,7 +187,12 @@ func RecieveCost(order Order, chan costChan map[string]cost.Cost) bool{
 
 	for {
 		
+		conn.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Millisecond))
 		_,err := net.ReadFromUDP(data)
+		if err != ("read udp4 0.0.0.0:"+ ORDERCONFIRMATIONPORT +": i/o timeout"){
+			CheckError(err, "ERROR!! while recieving cost")
+		}
+
 		json.Unmarshal(costInstance, &data)
 
 		if costInstance.Order == order{
@@ -191,7 +201,7 @@ func RecieveCost(order Order, chan costChan map[string]cost.Cost) bool{
 
 		if len(costMap) == len(aliveMap){
 			
-			costChan <- costMap
+			recieveCostChan <- costMap
 			
 			return true
 		}
@@ -209,7 +219,7 @@ func RecieveCost(order Order, chan costChan map[string]cost.Cost) bool{
 
 func MakeListenerConn(port string) *net.UDPConn{
 	udpAddr, err := net.ResolveUDPAddr("udp4", ":"+port)
-	CheckError(err, "ERROR while resolving UDPaddr for ListenToNetwork")
+	CheckError(err, "ERROR while resolving UDPaddr for listen")
 	fmt.Println("Establishing ListenToNetwork")
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	fmt.Println("Listening on port ", udpAddr.String())
@@ -219,14 +229,27 @@ func MakeListenerConn(port string) *net.UDPConn{
 
 func MakeSenderConn() *net.UDPConn{
 	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+ORDERPORT)
-	CheckError(err, "ERROR while resolving UDP addr")
+	CheckError(err, "ERROR while resolving UDP addr for sending")
 	conn, err := net.DialUDP("udp4", nil, sendAddr)
 	CheckError(err, "ERROR while dialing")
 	return conn
 
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan map[string]time.Time){
+func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order){ //IKKE FERDIG
+	conn := MakeListenerConn(ORDERCONFIRMATIONPORT)
+	data := make([]byte, 1024)
+	_,err := conn.ReadFromUDP(data)
+
+
+
+}
+
+func SendElevator(){}//IKKE FERDIG
+
+func RecieveElevator(){}//IKKE FERDIG
+
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan map[string]time.Time){//IKKE FERDIG
 	aliveChan := make(chan string)
 	requestAliveChan := make(chan map[string]time.Time)
 
