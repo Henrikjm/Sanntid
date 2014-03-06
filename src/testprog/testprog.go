@@ -2,10 +2,11 @@ package main
 
 import (
 	
-	"network"
+	//"network"
 	// "driver"
 	 "fmt"
 	// "time"
+	"encoding/json"
 
 )
 
@@ -16,8 +17,11 @@ import (
 func main() {
 	
 	
-	test := network.TestVariable{1,"he"}
-	fmt.Println(test)
+	//test := network.TestVariable{1,"he"}
+	test := "hei"
+	stringB,_ := json.Marshal(test)
+	fmt.Println(stringB, test)
+
 }
 	/*
 	const N_ELEVATORS int = 4
