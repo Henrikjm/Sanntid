@@ -82,17 +82,10 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 						updateFromAliveChan <- Change{"dead", ip}
 					}
 				}
-				if lengthOfMap != len(aliveMap) {
-					lengthOfMap = len(aliveMap)
-					updateFromAliveChan <- AliveOrDead(aliveMap)
-				}
 		}
 	}
 }
 
-func AliveOrDead() Change{
-
-}
 
 func SendUDP(port string, msg string) {
 	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+port)
