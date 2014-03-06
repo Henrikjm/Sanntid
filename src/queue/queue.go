@@ -2,7 +2,8 @@ package main
 
 import(
 	"fmt"
-	//"encoding/json"
+	"json"
+	"network"
 )
 
 type(
@@ -10,11 +11,10 @@ type(
 	OrderDir int
 )
 
-
 const(
 	N_BUTTONS int = 3
 	N_FLOORS  int = 4
-	MAX_ORDERS int = 11
+	MAX_ORDERS int = 10
 	N_ELEVATORS int = 2
 
 	ORDER_UP OrderDir = iota //matched with FLOOR for actuall order
@@ -26,13 +26,11 @@ const(
 	MOVE_STOP
 )
 
-
-
 type Elevator struct{
 	//constant
-	elevIp string
+	Ip string
 	//subject to change (will trigger select)
-	workQueue []int
+	orderQueue []Order
 	direction MoveDir
 	lastFloor int
 }
@@ -42,129 +40,163 @@ type Order struct{
 	orientation OrderDir
 }
 
-func GetElevNumber(elevators []Elevator)(int){
-	ownIp := network.GetLocalIp()
+type Cost struct{
+	cost int
+	order Order
+	ip string
+}
+
+
+func GetElevatorEligibilityScore(elevator Elevator, order Order) int {
+	score := 0
+	//correct direction plays 4 points difference
+	if elevator.direction == MOVE_STOP{
+		score += 0
+	}else if ((elevator.direction == MOVE_UP) && (order.floor > elevator.lastFloor)) || ((elevator.direction == MOVE_DOWN) && (order.floor < elevator.lastFloor)){ //hvis bestilling er i riktig retning
+		score += 4
+	}else{
+		score -= 4
+	}
+	// each order in queue before this order plays 1 point (NOTE: the internal and both the external orders play part consequently)
+	score -= GetNumberOfStopsBeforeOrder(elevator, order)
+	return score
+}
+
+func GetNumberOfStopsBeforeOrder(elevator Elevator, order Order)int{
+	placement := GetInsertOrderPlacement(elevator, order)
+	stops := placement
+	//fmt.Println("GetNumberOfStopsBeforeOrder: placement == ", placement)
+	for j:= 0; j < placement; j++{ //Removing common objective orders from score
+		fmt.Println(elevator.orderQueue[j].floor == elevator.orderQueue[j+1].floor)
+		fmt.Println(elevator.orderQueue[j].orientation == ORDER_INTERNAL || elevator.orderQueue[j+1].orientation == ORDER_INTERNAL)
+		if (elevator.orderQueue[j].floor == elevator.orderQueue[j+1].floor) && (elevator.orderQueue[j].orientation == ORDER_INTERNAL || elevator.orderQueue[j+1].orientation == ORDER_INTERNAL){
+			fmt.Println(stops)
+			j += 1
+			stops -= 1
+		}
+	}
+	return stops
+}
+
+func GetInsertOrderPlacement(elevator Elevator, order Order) int{
+	priOrder := GetInsertOrderPriority(elevator, order)
+	//fmt.Println("GetInserOrderPriority : order == ", order, "priOrder == ", priOrder)
+	for i := 0; i < MAX_ORDERS; i++{
+		if elevator.orderQueue[i] == order{
+			fmt.Println("ERROR in InsertOrder: identical order in queue")
+			break
+		}else if (GetInsertOrderPriority(elevator, elevator.orderQueue[i]) >= priOrder) && (elevator.orderQueue[i].floor >= order.floor) {
+			return i
+		}
+	}
+	return -1
+}
+
+func GetInsertOrderPriority(elevator Elevator, order Order) int{
+		if order.floor == 0{
+			fmt.Println("WARNING GetInsertOrderPriority: order.floor == 0")
+			return 5
+		}else if elevator.direction == MOVE_UP{
+			if order.floor > elevator.lastFloor{
+				if order.orientation == ORDER_UP || order.orientation == ORDER_INTERNAL{
+					return 1
+				}else if order.orientation == ORDER_DOWN{
+					return 2
+				}
+			}else if order.floor <= elevator.lastFloor{
+				if order.orientation == ORDER_DOWN || order.orientation == ORDER_INTERNAL{
+					return 3
+				}else if order.orientation == ORDER_UP{
+					return 4
+				}
+			}
+		}else if order.orientation == ORDER_DOWN{
+			if order.floor < elevator.lastFloor{
+				if order.orientation == ORDER_DOWN || order.orientation == ORDER_INTERNAL{
+					return 1
+				}else if order.orientation == ORDER_UP{
+					return 2
+				}
+			}else if order.floor >= elevator.lastFloor{
+				if order.orientation == ORDER_UP || order.orientation == ORDER_INTERNAL{
+					return 3
+				}else if order.orientation == ORDER_DOWN{
+					return 4
+				}
+			}
+		}
+		return -1
+}
+
+func InsertOrder(elevator Elevator, order Order){
+	if order.floor == 0{
+		fmt.Println("ERROR in InsertOrder: order.floor == 0")
+		return
+	}
+	placement := GetInsertOrderPlacement(elevator, order)
+	if placement == -1{
+		fmt.Println("WARNING in InsertOrder: order existing, insertion cancelled")
+	}
+	var temp, insert Order
+	insert = order
+	for i := placement; i <MAX_ORDERS; i++{
+		temp = elevator.orderQueue[i]
+		elevator.orderQueue[i] = insert
+		insert = temp
+	}
+}
+
+func GetLocalElevatorIndex(elevators []Elevator)int{
+	localIp := network.GetLocalIp()
 	for i := 0; i < N_ELEVATORS; i++{
-		if elevators[i].elevIp == ownIp{
+		if elevators[i].Ip == localIp{
 			return i
 		}
 	}
 }
 
-//Compare order returns a value based on place in priority (& thus place in workQueue)
-//ASSUMES: that workQueue[0] is the current optimal priority
+//func HandleNewOrderBidding(){}
 
-func InsertOrder(elevator *Elevator, order Order){
-	
-	workQueue := elevator.workQueue
-	lastFloor := elevator.lastFloor
-	var placement int
-
-	if order.floor == 0 {
-		Println("!!Error in CompareOrder ordered floor == 0")
-		return nil
-	}
-
-	for i := 0; i < N_FLOORS; i++{
-		
-		if workQueue[i] == 0 {
-			placement = i
-			break
-
-		}else if order.direction == MOVE_UP{
-			if order.floor > lastFloor && workQueue[i] > order.floor{
-				placement = i
-				break
-			}else if order.floor < lastFloor && workQueue[i] < order.floor {
-				placement = i
-				break
-			}
-
-		}else if order.direction == MOVE_DOWN{
-			if order.floor < lastFloor && workQueue[i] < order.floor{
-				placement = i
-				break
-			}else if order.floor > last.floor && workQueue[i] > order.floor{
-				placement = i
-				break
-			}
-		}
-	}
-
-	for i := 0; i <N_FLOORS; i++{
-
-
-
-	}
-
-
-
-func calculateScore(elevator Elevator, order Order){
-
-
-}
-
-
-func InsertOrder(elevators []Elevator)[]Elevator{
-}
-
-//Update Localy
-func HandleInternalOrder(elevators []Elevator, order Order){}
-	//if (order.floor > elevators[elevNumber].lastFloor) && (elevators[elevNumber].direction == MOVE_UP)
-
-
-//Update Globaly
-func HandleEksternalOrder(elevators []Elevator, order Order ){}
-
-//Update Globaly (will all do this?)
+//Update Global
 func HandleDeadElev(elevators []Elevator, deadIp string){}
 
 
 
 func main(){
-	emptyWorkQueue := make([]int, N_FLOORS)
-	var elevators [N_ELEVATORS]Elevator
+	//Making situation picture
+	localElevatorIndex := GetLocalElevatorIndex
+	fmt.Println("LocalElevatorIndex of ", elevators[localElevatorIndex].Ip, " = ", LocalElevatorIndex)
 
-	internalOrderChan := make(chan Order, 4)
-	eksternalOrderChan := make(chan Order, 6)
+	elevators := make([]Elevator, N_ELEVATORS)
 	
-	var internalOrder, eksternalOrder Order
-	var elevStatusChan chan Elevator
-	var dummyElevator Elevator
-	var aliveChan chan string
-	var deadIp, queuePort string
-	var elevNumber int
 
-	go driver.MonitorIO(internalOrderChan)
-	go driver.MonitorIO(eksternalOrderChan)
-	go driver.MonitorElev(elevStatusChan) //feeds elevStatusChan new signals from elevator (like floors((not defined)
-	go network.MonitorAlive(aliveChan) //feeds aliveChan the dead IP (udefinert)
+	//Channels
+	elevatorsChan := make(chan []Elevator)
+	newOrdersChan := make(chan Order, 6*N_ELEVATORS)
+	localOrdersChan := make(chan Order, 6)
+	receivedCostChan := make(chan Cost, MAX_ORDERS)
 
-	elevNumber = GetElevNumber(elevators)
+	var newOrder, localOrder Order
+	var receivedCost, localCost Cost
 
-	for{
-		select{
-		case internalOrder = <- internalOrderChan:
-			network.SendToNetworkUDP(queuePort, "Handling new internal order") //the common picture must be updated regardless
-			HandleInternalOrder(internalOrder)
-		case eksternalOrder = <- eksternalOrderChan:
-			network.SendToNetworkUDP(queuePort, "Handling new eksternal order") //the common picture must be updated regardless
-			HandleEksternalOrder(eksternalOrder)
-		case dummyElevator = <- elevStatusChan: //making sure we know what our elevator is doing
-			elevators[elevNumber].direction = dummyElevator.direction
-			elevators[elevNumber].lastFloor = dummyElevator.lastFloor
-		case deadIp = <- aliveChan:
-			HandleDeadElev(elevators, deadIp)
-		default: //for å ikke okkupere programtelleren
-		}
+	//go network.ListenForNewOrders(newOrdersChan)
+	//go driver.ListenForLocalOrders(localOrdersChan)
+	//go network.ListenForElevatorsUpdate(elevatorsChan)
+	//go network.ListenForCostList(costChan)
+
+	for select{
+		case elevators = <-elevatorsChan:
+		case localOrder = <- localOrdersChan:
+			InsertOrder(elevators[localElevatorIndex], localOrder)
+			network.SendElevatorsUpdate(elevators)
+		case newOrder = <-newOrdersChan: //recieves new order and replies with sending local cost
+			localCost = Cost{GetElevatorEligibilityScore(elevator, newOrder), newOrder, elevators[LocalElevatorIndex].Ip)
+			network.SendCost(localCost)
+		case receivedCost = <- receivedCostChan:
+
 	}
 
-
-	elevators[0] = Elevator{"129.241.187.147", MOVE_STOP, emptyWorkQueue}
-	fmt.Println(elevators[0])
-
-	//elevators[1] = Elevator{"129.241.187.147", MOVE_STOP, [11]int}
-
-	
+	//SendElevatorsUpdate
+	//SendCost
 
 }

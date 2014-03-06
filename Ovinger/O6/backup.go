@@ -121,7 +121,6 @@ func main(){
 				}
 			case count = <- countChan://Må oppdatere count
 				fmt.Println("Recieved: ",count)
-			
 			default:
 			}
 		}

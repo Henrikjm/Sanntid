@@ -2,6 +2,7 @@ package main
 
 import(
 	"fmt"
+	"json"
 )
 
 type(
@@ -38,6 +39,11 @@ type Order struct{
 	orientation OrderDir
 }
 
+type Cost struct{
+	cost int
+	order Order
+}
+
 
 func GetElevatorEligibilityScore(elevator Elevator, order Order) int {
 	score := 0
@@ -45,38 +51,48 @@ func GetElevatorEligibilityScore(elevator Elevator, order Order) int {
 	if elevator.direction == MOVE_STOP{
 		score += 0
 	}else if ((elevator.direction == MOVE_UP) && (order.floor > elevator.lastFloor)) || ((elevator.direction == MOVE_DOWN) && (order.floor < elevator.lastFloor)){ //hvis bestilling er i riktig retning
-		score =+ 4
+		score += 4
 	}else{
-		score =- 4
+		score -= 4
 	}
-	
 	// each order in queue before this order plays 1 point (NOTE: the internal and both the external orders play part consequently)
-	placement := 0
-	priOrder := GetInsertOrderPri(elevator, order)
-	for i := 0; i < MAX_ORDERS; i++{
-		if elevator.orderQueue[i] == order{
-			fmt.Println("!!Error in GetElevatorEligibilityScore: identical order in orderQueue")
-			score -= 100
-		}else if GetInsertOrderPri(elevator, elevator.orderQueue[i]) > priOrder{
-			placement = i
-			for j:= 0; j < i; j++{ //Removing common objective orders from score
-				fmt.Println("forloop placement = ", placement)
-				if (elevator.orderQueue[j].floor == elevator.orderQueue[j+1].floor) && (elevator.orderQueue[j].orientation == ORDER_INTERNAL || elevator.orderQueue[j+1].orientation == ORDER_INTERNAL){
-					placement -= 1
-					j += 1
-				}
-			}
-			break
-		}
-	}
-	fmt.Println("placement = ", placement)
-	score += placement
+	score -= GetNumberOfStopsBeforeOrder(elevator, order)
 	return score
 }
 
+func GetNumberOfStopsBeforeOrder(elevator Elevator, order Order)int{
+	placement := GetInsertOrderPlacement(elevator, order)
+	stops := placement
+	//fmt.Println("GetNumberOfStopsBeforeOrder: placement == ", placement)
+	for j:= 0; j < placement; j++{ //Removing common objective orders from score
+		fmt.Println(elevator.orderQueue[j].floor == elevator.orderQueue[j+1].floor)
+		fmt.Println(elevator.orderQueue[j].orientation == ORDER_INTERNAL || elevator.orderQueue[j+1].orientation == ORDER_INTERNAL)
+		if (elevator.orderQueue[j].floor == elevator.orderQueue[j+1].floor) && (elevator.orderQueue[j].orientation == ORDER_INTERNAL || elevator.orderQueue[j+1].orientation == ORDER_INTERNAL){
+			fmt.Println(stops)
+			j += 1
+			stops -= 1
+		}
+	}
+	return stops
+}
 
-func GetInsertOrderPri(elevator Elevator, order Order) int{
+func GetInsertOrderPlacement(elevator Elevator, order Order) int{
+	priOrder := GetInsertOrderPriority(elevator, order)
+	//fmt.Println("GetInserOrderPriority : order == ", order, "priOrder == ", priOrder)
+	for i := 0; i < MAX_ORDERS; i++{
+		if elevator.orderQueue[i] == order{
+			fmt.Println("ERROR in InsertOrder: identical order in queue")
+			break
+		}else if (GetInsertOrderPriority(elevator, elevator.orderQueue[i]) >= priOrder) && (elevator.orderQueue[i].floor >= order.floor) {
+			return i
+		}
+	}
+	return -1
+}
+
+func GetInsertOrderPriority(elevator Elevator, order Order) int{
 		if order.floor == 0{
+			fmt.Println("WARNING GetInsertOrderPriority: order.floor == 0")
 			return 5
 		}else if elevator.direction == MOVE_UP{
 			if order.floor > elevator.lastFloor{
@@ -92,7 +108,6 @@ func GetInsertOrderPri(elevator Elevator, order Order) int{
 					return 4
 				}
 			}
-
 		}else if order.orientation == ORDER_DOWN{
 			if order.floor < elevator.lastFloor{
 				if order.orientation == ORDER_DOWN || order.orientation == ORDER_INTERNAL{
@@ -113,25 +128,15 @@ func GetInsertOrderPri(elevator Elevator, order Order) int{
 
 func InsertOrder(elevator Elevator, order Order){
 	if order.floor == 0{
-		fmt.Println("!!Error in InsertOrder: order.floor == 0")
+		fmt.Println("ERROR in InsertOrder: order.floor == 0")
 		return
 	}
-
-	var placement, priOrder int
-	priOrder = GetInsertOrderPri(elevator, order)
-
-	for i := 0; i < MAX_ORDERS; i++{
-		if elevator.orderQueue[i] == order{
-			fmt.Println("!!Error in InsertOrder: identical order in queue")
-		}else if GetInsertOrderPri(elevator, elevator.orderQueue[i]) < priOrder{
-			placement = i
-			break
-		}
+	placement := GetInsertOrderPlacement(elevator, order)
+	if placement == -1{
+		fmt.Println("WARNING in InsertOrder: order existing, insertion cancelled")
 	}
-	
 	var temp, insert Order
 	insert = order
-
 	for i := placement; i <MAX_ORDERS; i++{
 		temp = elevator.orderQueue[i]
 		elevator.orderQueue[i] = insert
@@ -140,9 +145,22 @@ func InsertOrder(elevator Elevator, order Order){
 }
 
 
+//func HandleNewOrderBidding(){}
+
+
+//Update Localy
+func HandleLocalOrder(elevator Elevator, order Order){
+	InsertOrder(elevator,order)
+	network.UpdateElevatorStatus(elevator)
+}
+
+//Update Global
+func HandleDeadElev(elevators []Elevator, deadIp string){}
+
 
 
 func main(){
+
 	exOrder := make([]Order,MAX_ORDERS)
 	exOrder[0] = Order{3, ORDER_UP}
 	exOrder[1] = Order{3, ORDER_INTERNAL}
@@ -151,14 +169,19 @@ func main(){
 	nuOrder := Order{2,ORDER_UP}
 	elevator := Elevator{"elevator1:", exOrder, MOVE_UP, 1}
 
-	fmt.Println(elevator, " s.t Order = ", nuOrder)
+	//fmt.Println(elevator, " s.t Order = ", nuOrder)
 	InsertOrder(elevator, nuOrder)
 	fmt.Println(elevator)
 
+	priOrder := Order{4,ORDER_INTERNAL}
+	fmt.Println("num stops for ", priOrder, " = ", GetNumberOfStopsBeforeOrder(elevator, priOrder))
+
+
+/*
 	EligScore := GetElevatorEligibilityScore(elevator, nuOrder)
 	fmt.Println("eligble score of elevator1 :", EligScore)
 
 	EligScore = GetElevatorEligibilityScore(elevator, Order{4,ORDER_INTERNAL})
 	fmt.Println("eligble score of elevator1 :", EligScore)
-
+*/
 }
