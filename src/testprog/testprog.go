@@ -1,58 +1,40 @@
 package main
 
 import (
+	
 	"network"
-	//"driver"
-	"fmt"
-	"time"
-	"net"
-	"strings"
+	// "driver"
+	 "fmt"
+	// "time"
+
 )
 
-func GetLocalIp() *string {
-	conn, _ := net.Dial("udp4", "google.com:80")
-	//CheckError(err, "ERROR: LocalIp: dialing to google.com:80")
-	return &strings.Split(conn.LocalAddr().String(), ":")[0]
-}
 
-func RecieveAlive(alivePort string, aliveChan *chan map[string]time.Time){
-	data := make([]byte, 1024)
-	ownAddr := *GetLocalIp();
-	conn := network.MakeListenerConn(alivePort)
-	for {		
-		_, addr_, err := conn.ReadFromUDP(data)
-		CheckError(err, "ERROR ReadFromUDP")
 
-		if (string(data) == "ImAlive!") && (addr.String() != ownAddr){
-			*aliveChan <- addr.String()//add/update alive map
-		}
-	}
 
-}
-
-func UpdateAlive(aliveChan *chan string, updateChan *chan map[string]time.Time) {
-	for {
-		select{
-			case incomingIP := <-*aliveChan:
-				aliveMap[incomingIP] = time.Now()
-			case <-updateChan:
-				*updateChan<-aliveMap
-			default:
-				for i, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
-					if time.Now().Sub(value) > 500000000 {
-						delete(aliveMap, i)
-					}
-				}
-				if lengthOfMap != len(aliveMap) {
-					lengthOfMap = len(aliveMap)
-					*updateChan <- aliveMap
-				}
-		}
-	}
-}
 
 func main() {
+	
+	
+	test := network.TestVariable{1,"he"}
+	fmt.Println(test)
+}
+	/*
 	const N_ELEVATORS int = 4
+	  type Response1 struct {
+    	Page   int
+	    Fruits []string
+}
+	type Response2 struct {
+    	Page   int      `json:"page"`
+    	Fruits []string `json:"fruits"`
+	}
+	res1D := &Response1{
+        Page:   1,
+        Fruits: []string{"apple", "peach", "pear"}}
+    res1B, _ := json.Marshal(res1D)
+    fmt.Println(string(res1B))*/
+  
 	/*go func(){
 	driver.IoInit()
 	driver.SetBit(driver.LIGHT_STOP)
@@ -91,6 +73,7 @@ func main() {
 	fmt.Scanln(&exit)
 	*/
 
+/*
 	aliveArray := make(map[string]time.Time)
 	IP := *GetLocalIp()
 	aliveArray[IP] = time.Now()
@@ -100,8 +83,10 @@ func main() {
 	time.Sleep(time.Second * 1)
 	fmt.Println(time.Now().Sub(aliveArray[*GetLocalIp()]))
 	fmt.Println(len(aliveArray))
-	//aliveArray := make([]Alive)
 
+
+	//aliveArray := make([]Alive)
+	*/
 
 /*
 	workingVariable.timeRef = time.Now()
@@ -126,4 +111,3 @@ func main() {
 	fmt.Println(len(aliveArray))
 
 	*/
-}
