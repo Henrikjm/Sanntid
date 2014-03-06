@@ -6,7 +6,7 @@ import (
 	"time"
 	"strings"
 	"encoding/json"
-	"queue"
+	
 )
 
 const N_ELEVATORS int = 2
