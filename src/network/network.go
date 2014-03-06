@@ -6,7 +6,11 @@ import (
 	"time"
 	"strings"
 	"encoding/json"
+<<<<<<< HEAD
 	
+=======
+	".types"
+>>>>>>> 02bce73356fd2c81974153a248e4bd35384fa1ea
 )
 
 const N_ELEVATORS int = 2
@@ -17,12 +21,6 @@ const (
 	COSTPORT string = "44003"
 )
 
-type AliveArray [][]string
-
-type TestVariable struct{
-	Kek int 
-	Lol  string 
-}
 
 func CheckError(err error, errorMsg string) {
 	if err != nil {
@@ -43,46 +41,56 @@ func ImAliveUDP() {
 	}
 }
 
-func RecieveAliveUDP(aliveChan *chan string){
+func RecieveAliveUDP(aliveChan chan string){
 	data := make([]byte, 1024)
-	ownAddr := *GetLocalIp();
 	conn := MakeListenerConn(ALIVEPORT)
 	for {		
 		_, addr, err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR ReadFromUDP")
 
-		if (string(data) == "ImAlive!") && (addr.String() != ownAddr){
-			*aliveChan <- addr.String()//add/update alive map
+		if (string(data) == "ImAlive!")){
+			aliveChan <- addr.String()//add/update alive map
 		}
 	}
 
 }
 
-func UpdateAliveUDP(aliveChan *chan string, updateChan *chan map[string]time.Time) {
+func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requestAliveChan chan map[string]time.Time) {
+	go ImAliveUDP()
+	go RecieveAliveUDP(aliveChan)
+
 	aliveMap := make(map[string]time.Time)
 	var lengthOfMap int = 0
 
 	for {	
 		select{
-			case incomingIP := <-*aliveChan:
-				aliveMap[incomingIP] = time.Now()
-			case <-*updateForCostChan:
-				*updateChan<-aliveMap
+			case incomingIP := <-aliveChan:
+				if val,ok := aliveMap[incomingIP]; ok {
+					aliveMap[incomingIP] = time.Now()
+				}else{
+					aliveMap[incomingIP]=time.Now()
+					updateFromAliveChan <- Change{"new",incomingIP}
+				}
+			case <-updateForCostChan:
+				updateForCostChan<-aliveMap
+			case <-requestAliveChan:
+				requestAliveChan<-aliveMap
 			default:
-				for i, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
+				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
 					if time.Now().Sub(value) > 500000000 {
 						delete(aliveMap, i)
+						updateFromAliveChan <- Change{"dead", ip}
 					}
 				}
 				if lengthOfMap != len(aliveMap) {
 					lengthOfMap = len(aliveMap)
-					*updateChan <- aliveMap
+					updateFromAliveChan <- AliveOrDead(aliveMap)
 				}
 		}
 	}
 }
 
-func AliveOrDead(){
+func AliveOrDead() Change{
 
 }
 
@@ -95,10 +103,17 @@ func SendUDP(port string, msg string) {
 	conn.Close()
 }
 
-func GetLocalIp() *string {
+func GetLocalIp() string {
 	conn, err := net.Dial("udp4", "google.com:80")
 	CheckError(err, "ERROR: LocalIp: dialing to google.com:80")
-	return &strings.Split(conn.LocalAddr().String(), ":")[0]
+	return strings.Split(conn.LocalAddr().String(), ":")[0]
+}
+
+func LocalIpSender(localIpChan chan string){
+	for{
+		<-localIpChan
+		localIpChan<-GetLocalIp()
+	}
 }
 
 func ListenToOrderUDP(conn *net.UDPConn, incoming *chan string) {
@@ -118,14 +133,14 @@ func ListenToOrderUDP(conn *net.UDPConn, incoming *chan string) {
 	conn.Close()
 }
 
-func RecieveOrder(orderChannel chan queue.Order) {
+func RecieveOrder(orderChannel chan Order) {
 	conn := MakeListenerConn(ORDERPORT)
 	data := make([]byte, 1024)
 	for {
 		_, _, err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR ReadFromUDP")
 
-		var newOrder queue.Order
+		var newOrder Order
 		json.Unmarshal(newOrder, &data)
 		go func(order Order, orderChannel chan Order){
 			orderChannel <- newOrder
@@ -138,60 +153,65 @@ func RecieveOrder(orderChannel chan queue.Order) {
 }
 
 func SendOrder(order Order){
-	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+ORDERPORT)
-	CheckError(err, "ERROR while resolving UDP addr")
-	conn, err := net.DialUDP("udp4", nil, sendAddr)
-	CheckError(err, "ERROR while dialing")
+	conn := MakeSenderConn(ORDERPORT)
 
-	for{
+	for  /*Should consider adding a limitation to # of tries*/{
 	orderB,_ := json.Marshal(order)
 	conn.Write([]byte(order))
 
 	if RecieveCost(){
 		break
-	}
-	//Motta cost fra alle
-	//Hvis ikke cost mottas fra alle, oppdater koblingsliste og send på nytt
+		}
 	}
 
-	
 	conn.Close()
 }
 
-func SendCost() {
-	
+func SendCost(cost Cost) {
+
 }
 
-func RecieveCost() bool{
+func RecieveCost(order Order, chan costChan map[string]cost.Cost) bool{
 	conn := MakeListenerConn(COSTPORT)
 
+	//Oppdaterer liste over heiser som er tilkoblet
 	dummy := make(map[string]time.Time)
+
 	updateForCostChan <- dummy
 	aliveMap <- updateForCostChan
 
-	costMap := make(map[string]int)
+	costMap := make(map[string]cost.Cost)
 
 	//Les UDP i ett sekund eller til alle har levert cost rapport
-	costInstance := make(queue.Cost)
+	costInstance := make(Cost)
 	data := make([]byte, 1024)
+	t0 := time.Now()
+
 	for {
 		
 		_,err := net.ReadFromUDP(data)
 		json.Unmarshal(costInstance, &data)
 
+		if costInstance.Order == order{
+			costMap[costInstance.IP] = costInstance
+		}
 
-
+		if len(costMap) == len(aliveMap){
+			
+			costChan <- costMap
+			
+			return true
+		}
+		if time.Now().Sub(t0) > 500000000{
+			return false
+		}
 	}
 	//Lag et costMap med det som leses på UDP - Hvor mange ganger skal det leses over UDP? Lese kontinuerlig over en viss periode?
 	//Det skal være like langt som IP-listen
 	//Dersom vi har en cost for alle IP kan vi gå videre
 	
 
-	conn.close()
-}
-
-func confirmOrder() {
-	
+	conn.Close()
 }
 
 func MakeListenerConn(port string) *net.UDPConn{
@@ -204,7 +224,21 @@ func MakeListenerConn(port string) *net.UDPConn{
 	return conn
 }
 
-func NetworkHandler(){
+func MakeSenderConn() *net.UDPConn{
+	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+ORDERPORT)
+	CheckError(err, "ERROR while resolving UDP addr")
+	conn, err := net.DialUDP("udp4", nil, sendAddr)
+	CheckError(err, "ERROR while dialing")
+	return conn
+
+}
+
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan map[string]time.Time){
+	aliveChan := make(chan string)
+	requestAliveChan := make(chan map[string]time.Time)
+
 	
+	go localIpSender(localIpChan)
+	go updateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan)
 }
 
