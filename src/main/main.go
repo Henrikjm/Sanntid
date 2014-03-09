@@ -4,7 +4,7 @@ import(
 	"driver"
 	"fmt"
 	//"network"
-	"queue"
+	//"queue"
 	."types"
 )
 
@@ -20,7 +20,7 @@ concerened that queue might overwrite the direction and lastfloor variables, not
 //::::::::::::::::::::
 */
 
-
+/*
 //---NETWORK - QUEUE
 //------- Update
 receiveElevatorChan := make(chan Elevator)
@@ -35,7 +35,7 @@ receivedCostsChan := make(chan []Cost)
 changedElevatorChan := make(chan Change)
 //-------- Get
 localIpChan := make(chan string)
-
+*/
 //---DRIVER - QUEUE
 // ------- I/O
 localOrdersChan := make(chan Order)
@@ -44,8 +44,8 @@ receiveDriverUpdateChan := make(chan Elevator)
 updateDriverChan := make(chan Elevator)
 
 go driver.ControlHandler(localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
-go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderChan, deadOrderChan, sendCostChan, receivedCostsChan, 
-	changedElevatorChan, localIpChan , localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
+//go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderChan, deadOrderChan, sendCostChan, receivedCostsChan, 
+//	changedElevatorChan, localIpChan , localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
 
 var exit string
 fmt.Scanln(&exit)
