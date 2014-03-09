@@ -2,83 +2,9 @@ package driver
 
 import (
 	"time"
+	."types"
 )
 
-//TYPE DEFINES
-type OrderDir int
-type MoveDir int
-
-//VARIABLES
-var motorChannel chan MoveDir
-
-//CONSTANTS
-const (
-	N_BUTTONS int = 3
-	N_FLOORS  int = 4
-
-	MAXSPEED int = 4048
-	MINSPEED int = 2048
-
-	ORDER_UP OrderDir = iota
-	ORDER_DOWN
-	ORDER_INTERNAL
-
-	MOVE_UP MoveDir = iota
-	MOVE_DOWN
-	MOVE_STOP
-)
-
-func InitElev() {
-	ClearAllLights()
-	motorChannel = make(chan MoveDir)
-
-	go MotorControl()
-
-	for {
-		motorChannel <- MOVE_DOWN
-		time.Sleep(time.Second * 1)
-		motorChannel <- MOVE_UP
-		time.Sleep(time.Second * 1)
-		motorChannel <- MOVE_STOP
-		time.Sleep(time.Second * 1)
-	}
-}
-
-func MonitorIO(monitor chan){
-	
-
-}
-
-func MonitorElev(monitor chan){
-
-}
-
-func MotorControl() {
-	currentDir := MOVE_STOP
-	WriteAnalog(MOTOR, MINSPEED)
-	for {
-		newDir := <-motorChannel
-
-		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
-			SetBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 10)
-			WriteAnalog(MOTOR, MINSPEED)
-		} else if (newDir == MOVE_STOP) && (currentDir == MOVE_DOWN) {
-			ClearBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 10)
-			WriteAnalog(MOTOR, MINSPEED)
-		} else if newDir == MOVE_UP {
-			ClearBit(MOTORDIR)
-			WriteAnalog(MOTOR, MAXSPEED)
-		} else if newDir == MOVE_DOWN {
-			SetBit(MOTORDIR)
-			WriteAnalog(MOTOR, MAXSPEED)
-		} else {
-			WriteAnalog(MOTOR, MINSPEED)
-		}
-		currentDir = newDir
-	}
-}
 
 func ClearAllLights() {
 	ClearAllOrderLights()
@@ -127,27 +53,27 @@ func ClearAllOrderLights() {
 
 func SetDoorOpenLight() { SetBit(DOOR_OPEN) }
 func SetStopLight()     { SetBit(LIGHT_STOP) }
-func SetOrderLight(floor int, dir OrderDir) {
+func SetOrderLight(order Order) {
 	switch {
-	case floor == 1 && dir == ORDER_UP:
+	case order.Floor == 1 && order.Orientation == ORDER_UP:
 		SetBit(LIGHT_UP1)
-	case floor == 2 && dir == ORDER_UP:
+	case order.Floor == 2 && order.Orientation== ORDER_UP:
 		SetBit(LIGHT_UP2)
-	case floor == 3 && dir == ORDER_UP:
+	case order.Floor == 3 && order.Orientation == ORDER_UP:
 		SetBit(LIGHT_UP3)
-	case floor == 2 && dir == ORDER_DOWN:
+	case order.Floor == 2 && order.Orientation == ORDER_DOWN:
 		SetBit(LIGHT_DOWN2)
-	case floor == 3 && dir == ORDER_DOWN:
+	case order.Floor == 3 && order.Orientation == ORDER_DOWN:
 		SetBit(LIGHT_DOWN3)
-	case floor == 4 && dir == ORDER_DOWN:
+	case order.Floor == 4 && order.Orientation == ORDER_DOWN:
 		SetBit(LIGHT_DOWN4)
-	case floor == 1 && dir == ORDER_INTERNAL:
+	case order.Floor == 1 && order.Orientation == ORDER_INTERNAL:
 		SetBit(LIGHT_COMMAND1)
-	case floor == 2 && dir == ORDER_INTERNAL:
+	case order.Floor == 2 && order.Orientation == ORDER_INTERNAL:
 		SetBit(LIGHT_COMMAND2)
-	case floor == 3 && dir == ORDER_INTERNAL:
+	case order.Floor == 3 && order.Orientation == ORDER_INTERNAL:
 		SetBit(LIGHT_COMMAND3)
-	case floor == 4 && dir == ORDER_INTERNAL:
+	case order.Floor == 4 && order.Orientation == ORDER_INTERNAL:
 		SetBit(LIGHT_COMMAND4)
 	}
 }
@@ -172,5 +98,88 @@ func SetFloorIndicatorLight(floor int) {
 //READS
 func GetStopButton()  { ReadBit(STOP) }
 func GetObstruction() { ReadBit(OBSTRUCTION) }
-func GetOrderButton() {}
-func ReadFloor()      {}
+
+func GetOrderButton(localOrdersChan chan Order){
+	for{
+		switch{
+		case ReadBit(FLOOR_UP1):
+			localOrdersChan <- Order{1,ORDER_UP}
+		case ReadBit(FLOOR_UP2):
+			localOrdersChan <- Order{2, ORDER_UP}
+		case ReadBit(FLOOR_UP3):
+			localOrdersChan <- Order{3, ORDER_UP}
+		case ReadBit(FLOOR_DOWN2):
+			localOrdersChan <- Order{2, ORDER_DOWN}
+		case ReadBit(FLOOR_DOWN3):
+			localOrdersChan <- Order{3, ORDER_DOWN}
+		case ReadBit(FLOOR_DOWN4):
+			localOrdersChan <- Order{4, ORDER_DOWN}
+		case ReadBit(FLOOR_COMMAND1):
+			localOrdersChan <- Order{1, ORDER_INTERNAL}
+		case ReadBit(FLOOR_COMMAND2):
+			localOrdersChan <- Order{2, ORDER_INTERNAL}
+		case ReadBit(FLOOR_COMMAND3):
+			localOrdersChan <- Order{3, ORDER_INTERNAL}
+		case ReadBit(FLOOR_COMMAND4):
+			localOrdersChan <- Order{4, ORDER_INTERNAL}
+		}
+	}
+
+
+
+
+}
+
+func ReadFloor()int{
+	switch{
+	case ReadBit(SENSOR1):
+		return 1
+	case ReadBit(SENSOR2):
+		return 2
+	case ReadBit(SENSOR3):
+		return 3
+	case ReadBit(SENSOR4):
+		return 4
+	}
+	return 0
+}
+
+
+
+func MotorControl() {
+	currentDir := MOVE_STOP
+	WriteAnalog(MOTOR, MINSPEED)
+	for {
+		newDir := <-motorChannel
+
+		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
+			SetBit(MOTORDIR)
+			time.Sleep(time.Millisecond * 10)
+			WriteAnalog(MOTOR, MINSPEED)
+			time.Sleep(time.Millisecond*500) //might not be a good idea
+		} else if (newDir == MOVE_STOP) && (currentDir == MOVE_DOWN) {
+			ClearBit(MOTORDIR)
+			time.Sleep(time.Millisecond * 10)
+			WriteAnalog(MOTOR, MINSPEED)
+			time.Sleep(time.Millisecond*500)//might not be a good idea
+		} else if newDir == MOVE_UP {
+			ClearBit(MOTORDIR)
+			WriteAnalog(MOTOR, MAXSPEED)
+			time.Sleep(time.Second*1)
+		} else if newDir == MOVE_DOWN {
+			SetBit(MOTORDIR)
+			WriteAnalog(MOTOR, MAXSPEED)
+			time.Sleep(time.Second*1)
+		} else {
+			WriteAnalog(MOTOR, MINSPEED)
+		}
+		currentDir = newDir
+	}
+}
+
+
+
+//VARIABLES
+var motorChannel chan MoveDir
+var readFloorChannel chan int
+

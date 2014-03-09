@@ -1,31 +1,54 @@
 package main
 
 import(
-	"fmt"
 	"driver"
-	"network"
+	"fmt"
+	//"network"
 	"queue"
+	."types"
 )
 
 
 func main() {
-	
-var(
-//Queue channels
-	/* very much subject of change
-	recieveElevatorChan chan Elevator
-	sendElevatorChan chan Elevator
-	newOrderChan chan Order
-	deadOrderChan chan Order
-	sendCostChan chan Cost
-	receivedCostsChan chan []Cost 
-	changedElevatorChan chan Change
-	localIpChan chan string
-	updateDriverChan chan Elevator
-	lreceiveDriveUpdateChan chan Orderr
-*/
-)
+/*
+//NOTES::::::::::::
+1. Concidering changing the channel updating the DRIVER to be only a Order type, not entire elevator
+concerened that queue might overwrite the direction and lastfloor variables, not ideal.
 
+
+
+//::::::::::::::::::::
+*/
+
+
+//---NETWORK - QUEUE
+//------- Update
+receiveElevatorChan := make(chan Elevator)
+updateNetworkChan := make(chan Elevator)
+//-------- Orders
+newOrderChan := make(chan Order)
+deadOrderChan := make(chan Order)
+//-------- Costs
+sendCostChan := make(chan Cost)
+receivedCostsChan := make(chan []Cost)
+//-------- Change
+changedElevatorChan := make(chan Change)
+//-------- Get
+localIpChan := make(chan string)
+
+//---DRIVER - QUEUE
+// ------- I/O
+localOrdersChan := make(chan Order)
+// ------- Update
+receiveDriverUpdateChan := make(chan Elevator)
+updateDriverChan := make(chan Elevator)
+
+go driver.ControlHandler(localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
+go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderChan, deadOrderChan, sendCostChan, receivedCostsChan, 
+	changedElevatorChan, localIpChan , localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
+
+var exit string
+fmt.Scanln(&exit)
 }
 
 //CHANNEL OVERWIEV
@@ -34,6 +57,7 @@ var(
 // receiveElevatorChan - for receiving updates on the elevators status
 // updateNetworkChan - for sending updates on local elevator status
 //-------- Orders
+// sendLocalOrderChan - every non INTERNAL order must be relayed to
 // newOrderChan - First instance of a new order, gives an order for calculation of cost
 // deadOrderChan - sends orders from dead elevator to network module (to be used as new orders)
 //-------- Costs

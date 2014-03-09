@@ -2,11 +2,17 @@ package main
 
 import(
 	"fmt"
+	."types"
 )
 
 func main(){
 	
-	i := 5
-	if i >= 5{fmt.Println("hello")}
+	liste := make([]int, 10)
+
+	liste[0] = 12
+	liste[1] = 2
+
+	fmt.Println(len(liste))
+	fmt.Println(Order{})
 
 }

@@ -1,4 +1,4 @@
-package main
+package queue
 
 import(
 	"fmt"
@@ -129,7 +129,7 @@ func GetLocalElevatorIndex(elevators []Elevator, localIp string)int{
 	return -1
 }
 
-func HandleDeadElev(elevators []Elevator, ip string, deadOrderChan chan Order){
+func HandleDeadElev(elevators []Elevator, ip string, sendLocalOrdersChan chan Order){
 	var i int
 	var deadElevQueue []Order
 	for i = 0 ; i < N_ELEVATORS; i++{
@@ -139,7 +139,7 @@ func HandleDeadElev(elevators []Elevator, ip string, deadOrderChan chan Order){
 		}
 	}
 	for i = 0; i < len(deadElevQueue); i++{
-		deadOrderChan <- deadElevQueue[i]
+		sendLocalOrdersChan <- deadElevQueue[i]
 	}
 }
 
@@ -147,6 +147,7 @@ func HandleNewElevator(elevators []Elevator, ip string){
 	for i := 0; i < N_ELEVATORS; i++{
 		if elevators[i].Ip == ""{ //tom plass
 			elevators[i].Ip = ip
+			elevators[i].OrderQueue = make([]Order,MAX_ORDERS)
 			break
 		}
 	}
@@ -161,9 +162,8 @@ func TimedUpdate(timedUpdateChan chan string){
 
 
 
-func queueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderChan chan Order, deadOrderChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
-	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, updateElevatorControlChan chan Elevator, 
-	receiveElevatorControlUpdateChan chan Elevator){
+func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderChan chan Order, sendLocalOrdersChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
+	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator){
 		
 
 	//Variables
@@ -174,55 +174,26 @@ func queueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	var updateElevator Elevator
 	timedUpdateChanNetwork := make(chan string)
 	timedUpdateChanDriver := make(chan string)
-	timedUpdateChanElevatorControl := make(chan string)
 
 	//Making situation picture
 	elevators := make([]Elevator, N_ELEVATORS) //empty list of elevators
-	localIpChan <- "LocalIp"
-	localIp := <- localIpChan //Gets the local IP
+	localIp := "129.241.187.81"
+	//removed for testing DO NOT ERASE
+	//localIpChan <- "LocalIp"
+	//localIp := <- localIpChan //Gets the local IP
 	HandleNewElevator(elevators, localIp) //Ads the Ip to empty slot of elevators
 	localElevatorIndex := GetLocalElevatorIndex(elevators, localIp)
+	receiveDriverUpdateChan <- elevators[0]
 	updateElevator = <- receiveDriverUpdateChan //Ads information from elevator (driver)
 	elevators[localElevatorIndex] = updateElevator
 
 	go TimedUpdate(timedUpdateChanNetwork)
 	go TimedUpdate(timedUpdateChanDriver)
-	go TimedUpdate(timedUpdateChanElevatorControl)
 
-//CHANNEL OVERWIEV
-//Network channel interface:
-//------- Update
-// receiveElevatorChan - for receiving updates on the elevators status
-// updateNetworkChan - for sending updates on local elevator status
-//-------- Orders
-// newOrderChan - First instance of a new order, gives an order for calculation of cost
-// deadOrderChan - sends orders from dead elevator to network module (to be used as new orders)
-//-------- Costs
-// sendCostChan - For sending cost after receiving newOrder, will be made a map in network and sent to all machines
-// receivedCostsChan - for receiving costs, identefy whether to apply change localy (if cost.ip is local)
-//-------- Changes
-// changedElevatorChan - dead or new elevator, will be handled by first elevator in list of elevators
-//-------- Get
-// localIpChan - sends request for local ip and waits to receive it
-
-//Driver channel interface:
-// ------- I/O
-// localOrdersChan - for channeling orders received on internal buttons
-// ------- Update
-// receiveDriverUpdateChan - for updating the local elevator
-// UpdateDriverChan - channel for sending elevator to driver, for setting lights (and more?)
-
-//ElevatorControl channel interface:
-//updateElevatorControlChan - for updating the control when receiving new shit f.eks....
-//receiveElevatorControlUpdateChan - for getting updates when floor reached
-
-//Local channels
-// ------- Update
-//TimedUpdateChanNetwork - channel that activates withing gorutined function with sleep every eks 100 milisec
-//TimedUpdateChanDriver - for activating a driver update of elevator
 
 	//Listening and handling
 	for{
+		fmt.Println("queue : ", elevators)
 		select{
 		//receiving updates from other modules
 		case updateElevator = <- receiveDriverUpdateChan:
@@ -234,19 +205,19 @@ func queueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					break
 				}
 			}
-		case updateElevator = <- receiveElevatorControlUpdateChan:
-			elevators[localElevatorIndex] = updateElevator
 		//Updating the other modules
+			/* RULING OUT CHANNEL WAITING FOR NOW
 		case <- timedUpdateChanNetwork: // Timed update to network
 			updateNetworkChan <- elevators[localElevatorIndex]
 		case <- timedUpdateChanDriver:
 			updateDriverChan <- elevators[localElevatorIndex]
-		case <- timedUpdateChanElevatorControl:
-			updateElevatorControlChan <- elevators[localElevatorIndex]
-
-
+			 */
 		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
-			InsertOrder(elevators[localElevatorIndex], localOrder)
+			if localOrder.Orientation == ORDER_INTERNAL{
+				InsertOrder(elevators[localElevatorIndex], localOrder) //send explisit update?
+			}else{
+				sendLocalOrdersChan <- localOrder
+			}
 			updateNetworkChan <- elevators[localElevatorIndex]
 		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
 			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
@@ -268,13 +239,14 @@ func queueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				if changedElevator.Type == "new"{
 					HandleNewElevator(elevators, changedElevator.Ip)
 				}else if changedElevator.Type == "dead"{
-					HandleDeadElev(elevators, changedElevator.Ip, deadOrderChan)
+					HandleDeadElev(elevators, changedElevator.Ip, sendLocalOrdersChan)
 				}
 			}
 		}
 	}
 }
 
+/*
 func main() {
 	
 	fmt.Println("debugging change")
@@ -311,3 +283,4 @@ func main() {
 
 
 }
+*/
