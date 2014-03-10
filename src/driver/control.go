@@ -2,7 +2,7 @@ package driver
  
  import (
 	"fmt"
-	//"time"
+	"time"
 	."types"
 )
 
@@ -19,11 +19,14 @@ func SetNewDirection(elevator *Elevator){
 	}
 }
 
-func ReachedFloorClearOrders(elevator *Elevator){
+func ReachedFloorClearOrders(elevator *Elevator){//, floor int){
 	jump := 1
 	if (elevator.OrderQueue[0].Floor == elevator.OrderQueue[1].Floor) && 
 	(elevator.OrderQueue[0].Orientation == ORDER_INTERNAL || elevator.OrderQueue[1].Orientation == ORDER_INTERNAL){
 		jump = 2
+	}
+	for i:= 0; i < jump; i++{
+		clearOrderLightChannel <- elevator.OrderQueue[i]
 	}
 	for i:= 0; i < MAX_ORDERS-jump; i++{
 		elevator.OrderQueue[i] = elevator.OrderQueue[i+jump]
@@ -31,6 +34,13 @@ func ReachedFloorClearOrders(elevator *Elevator){
 	for i:= 0; i < jump; i++{
 		elevator.OrderQueue[MAX_ORDERS-1-i] = Order{}
 		//clearOrderLightChannel <- elevator.OrderQueue[i]
+	}
+}
+
+func TimedUpdate(timedUpdateChan chan string, interval int){
+	for{
+		timedUpdateChan <- "Update"
+		time.Sleep(time.Millisecond * time.Duration(interval))
 	}
 }
 
@@ -44,144 +54,117 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 		elevator Elevator
 		reachedFloor int
 		state string
-
+		dummyElev Elevator
+		waitTime time.Time
 	)
+	queueUpdateInterval := 200
 
 	//channels
-	receiveQueueUpdateChan = make(chan Elevator)
-	updateQueueChan = make(chan Elevator)
 	motorChannel = make(chan MoveDir)
 	setOrderLightChannel = make(chan []Order)
 	clearOrderLightChannel = make(chan Order)
 	stopButtonChannel = make(chan bool)
+	testChannel := make(chan bool,1)
+	timedUpdateQueueChan := make(chan string)
 
 	//Function calls
 	IoInit()
-	
 	go MotorControl()
-	//go GetOrderButton(localOrdersChan)
-	//go SetOrderLights()
-	//go ClearOrderLight()
-	//go GetStopButton()
-	//ClearAllLights()
+	go GetOrderButton(localOrdersChan)
+	go SetOrderLights()
+	go ClearOrderLight()
+	go TimedUpdate(timedUpdateQueueChan, queueUpdateInterval)
+	go SetOrderLights()
+	go ClearAllLights()
 	
 
 	//testvariables
-	OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
-	elevator.OrderQueue = OrderQueue
+	//OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
+	fmt.Println("yo")
+	dummyElev = <-receiveQueueUpdateChan
+	elevator.OrderQueue = dummyElev.OrderQueue
 	state = "start"
 	
-	//STATE MACHINE! (it works it think!)
-	for{
-		switch state{
-		case "start":
-			fmt.Println(state)
-			fmt.Println(reachedFloor)
-			elevator.Direction = MOVE_STOP
-			elevator.LastFloor = 0
-			reachedFloor = ReadFloor()
-			if reachedFloor == 0{
-				motorChannel <- MOVE_UP
-			}
-			for{
-				reachedFloor = ReadFloor()
-				if  reachedFloor > 0{
-				motorChannel <- MOVE_STOP
-				break
-				}
-			}
-			elevator.LastFloor = reachedFloor
-			fmt.Println("start: ", elevator)
-			//setOrderLightChannel <- elevator.OrderQueue
-			state = "idle"
-		case "moving":
-			reachedFloor = ReadFloor()
-			if reachedFloor > 0{ 
-				elevator.LastFloor = reachedFloor
-				state = "floor"
-			}
-		case "floor":
-			if elevator.LastFloor == elevator.OrderQueue[0].Floor{
-				motorChannel <- MOVE_STOP
-				elevator.Direction = MOVE_STOP
-				state = "arrived"
-			}else{
-				state = "moving"
-			}
-			SetFloorIndicatorLight(reachedFloor)
-		case "arrived":
-			fmt.Println(state)
-			//time.Sleep(time.Second*2)
-			state = "idle"
-		case "idle":
-			fmt.Println(state)
-			if elevator.OrderQueue[0].Floor > 0{
-				if elevator.OrderQueue[0].Floor == elevator.LastFloor{
-					ReachedFloorClearOrders(&elevator)
-				}else{
-					SetNewDirection(&elevator)
-					fmt.Println("RAW TO MOTORCHANNEL: ", elevator.Direction)
-					motorChannel <- elevator.Direction
-					state = "moving"
-					fmt.Println(state)
-				}	
-			}
-		}
-		select{
-		case <-stopButtonChannel:
-			fmt.Println("STOP BUTTON PRESSED")
-			motorChannel <- MOVE_STOP
-			elevator.Direction = MOVE_STOP
-			updateQueueChan <- elevator
-		default:
-		}
-	}
-
-
-
-	/*
-	InitializeElevator(&elevator)
-	SetNewDirection(&elevator)
-	fmt.Println(elevator) //checkpoint
-	motorChannel <- elevator.Direction
-	fmt.Println(elevator.Direction)
-	if elevator.OrderQueue[0].Floor == reachedFloor{
-		ReachedFloorClearOrders(&elevator)
-		fmt.Println("DELETED? ", elevator)
-		time.Sleep(time.Second*3)
-	}
-
 	
-	// State-Machine
-	for {
-		fmt.Println(elevator)
-		fmt.Println("elevator dir = ", elevator.Direction, " elevator.OrderQueue[0] = ", elevator.OrderQueue[0].Floor)
-		//elevator = <- receiveQueueUpdateChan
-		reachedFloor = ReadFloor()
-		switch{
-			case reachedFloor > 0 && reachedFloor != elevator.LastFloor:
-				fmt.Println("case reachedFloor")
-				SetFloorIndicatorLight(reachedFloor)
+	for{
+		select{
+		case <- timedUpdateQueueChan:
+			//go func(elevator Elevator){ //litt dirty men går jo veldig bra
+				updateQueueChan <- elevator
+			//}(elevator)
+		case dummyElev = <- receiveQueueUpdateChan:
+			elevator.OrderQueue = dummyElev.OrderQueue
+			setOrderLightChannel <- elevator.OrderQueue
+		default: //STATE MACHINE!
+			switch state{
+			case "start":
+				elevator.Direction = MOVE_STOP
+				elevator.LastFloor = 0
+				reachedFloor = ReadFloor()
+				if reachedFloor == 0{
+					motorChannel <- MOVE_UP
+				}
+				for{
+					reachedFloor = ReadFloor()
+					if  reachedFloor > 0{
+					motorChannel <- MOVE_STOP
+					break
+					}
+				}
 				elevator.LastFloor = reachedFloor
-				if elevator.OrderQueue[0].Floor == reachedFloor{
+				setOrderLightChannel <- elevator.OrderQueue
+				state = "idle"
+				fmt.Println(state)
+			case "moving":
+				reachedFloor = ReadFloor()
+				if ReadBit(STOP) {
+					motorChannel <- MOVE_STOP 
+					state = "stop"
+					SetStopLight()
+					time.Sleep(time.Millisecond*500)
+				}else if reachedFloor > 0{ 
+					elevator.LastFloor = reachedFloor
+					state = "floor"
+				}
+			case "floor":
+				if elevator.LastFloor == elevator.OrderQueue[0].Floor{
 					motorChannel <- MOVE_STOP
 					elevator.Direction = MOVE_STOP
+					state = "arrived"
 					ReachedFloorClearOrders(&elevator)
-					time.Sleep(time.Second*3)
-					//updateQueueChan <- elevator
+					waitTime = time.Now().Add(2*time.Second)
+				}else{
+					state = "moving"
 				}
-
-			case elevator.Direction == MOVE_STOP && elevator.OrderQueue[0].Floor > 0:
-				fmt.Println("case arrived")
-				SetNewDirection(&elevator)
-				//updateQueueChan <- elevator
-				motorChannel <- elevator.Direction
+				SetFloorIndicatorLight(reachedFloor)
+			case "arrived":
+		        if time.Now().After(waitTime){
+					state = "idle"
+		        }
+			case "idle":
+				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_INTERNAL}
+				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_UP}
+				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_DOWN}
+				if elevator.OrderQueue[0].Floor > 0{
+					if elevator.OrderQueue[0].Floor == elevator.LastFloor{
+						ReachedFloorClearOrders(&elevator) //changing variable n
+					}else{
+						SetNewDirection(&elevator)
+						fmt.Println("RAW TO MOTORCHANNEL: ", elevator.Direction)
+						motorChannel <- elevator.Direction
+						state = "moving"
+						fmt.Println(state)
+					}	
+				}
+			case "stop":
+				if ReadBit(STOP){
+					ClearStopLight()
+					state = "moving"
+					motorChannel <- elevator.Direction
+					time.Sleep(time.Second*1)
+					testChannel <- true
+				}
 			}
-			//select{
-		//case <- updateQueueChan:
-		//	updateQueueChan <- elevator
-		//default:
-		//}
+		}
 	}
-	*/
 }

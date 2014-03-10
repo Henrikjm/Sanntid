@@ -38,21 +38,20 @@ func GetNumberOfStopsBeforeOrder(elevator Elevator, order Order)int{
 
 func GetInsertOrderPlacement(elevator Elevator, order Order) int{
 	var oldPri int
+	if elevator.OrderQueue[0].Floor == 0{
+		return 0
+	}
 	newPri := GetInsertOrderPriority(elevator, order)
-	//fmt.Println("newPri order ",order," = ", newPri)
-	//fmt.Println("GetInserOrderPriority : order == ", order, "newPri == ", newPri)
 	for i := 0; i < MAX_ORDERS; i++{
 		oldPri = GetInsertOrderPriority(elevator, elevator.OrderQueue[i])
-		if elevator.OrderQueue[i] == order{
-			fmt.Println("WARNING in GetInsertOrderPlacement: identical order ", order, " already in queue")
-			return i
-		}else if oldPri >= newPri{
+		fmt.Println("newPri = ", newPri, "oldPri = ", oldPri)
+		if oldPri >= newPri{
 				//newPri 1 and means that the order is "on-the-way" of the tour and reretour respectively, we optimize with respect to the current direction
 			if newPri == oldPri{
-				if (newPri == 1 || newPri == 4) && ((elevator.Direction == MOVE_UP && elevator.OrderQueue[i].Floor > order.Floor) || (elevator.Direction == MOVE_DOWN && elevator.OrderQueue[i].Floor < order.Floor)){
+				if (newPri == 1 || newPri == 4) && ((elevator.LastFloor < elevator.OrderQueue[0].Floor && elevator.OrderQueue[i].Floor > order.Floor) || (elevator.LastFloor > elevator.OrderQueue[0].Floor && elevator.OrderQueue[i].Floor < order.Floor)){
 					return i
 				//newPri 2 or 3 means that the order is "on-the-way" of the retour, we optimize with respect to direction
-				}else if (newPri == 2 || newPri == 3) && ((elevator.Direction == MOVE_UP && order.Floor > elevator.OrderQueue[i].Floor) || (elevator.Direction == MOVE_DOWN && order.Floor < elevator.OrderQueue[i].Floor)){
+				}else if (newPri == 2 || newPri == 3) && ((elevator.LastFloor < elevator.OrderQueue[0].Floor && order.Floor > elevator.OrderQueue[i].Floor) || (elevator.LastFloor > elevator.OrderQueue[0].Floor && order.Floor < elevator.OrderQueue[i].Floor)){
 					return i
 				}
 			}else{
@@ -61,13 +60,13 @@ func GetInsertOrderPlacement(elevator Elevator, order Order) int{
 		}
 	}
 	return -1
-}//fmt.Println("IOPriority", elevator.OrderQueue[i], " = ", GetInsertOrderPriority(elevator, elevator.OrderQueue[i]) )
+}
 
 func GetInsertOrderPriority(elevator Elevator, order Order) int{
 		if order.Floor == 0{
 			fmt.Println("WARNING GetInsertOrderPriority: order.Floor == 0")
 			return 5
-		}else if elevator.Direction == MOVE_UP{
+		}else if elevator.OrderQueue[0].Floor > elevator.LastFloor{
 			if order.Floor > elevator.LastFloor{
 				if order.Orientation == ORDER_UP || order.Orientation == ORDER_INTERNAL{
 					return 1
@@ -81,7 +80,7 @@ func GetInsertOrderPriority(elevator Elevator, order Order) int{
 					return 4
 				}
 			}
-		}else if elevator.Direction == MOVE_DOWN{
+		}else if elevator.OrderQueue[0].Floor < elevator.LastFloor{
 			if order.Floor < elevator.LastFloor{
 				if order.Orientation == ORDER_DOWN || order.Orientation == ORDER_INTERNAL{
 					return 1
@@ -106,9 +105,10 @@ func InsertOrder(elevator Elevator, order Order){
 	}
 	placement := GetInsertOrderPlacement(elevator, order)
 	fmt.Println("Placement of ", order, " = ", placement)
+	/*
 	if placement == -1{
 		fmt.Println("WARNING in InsertOrder: order existing, insertion cancelled")
-	}
+	}*/
 	var temp, insert Order
 	insert = order
 	for i := placement; i <MAX_ORDERS; i++{
@@ -160,12 +160,37 @@ func TimedUpdate(timedUpdateChan chan string){
 	}
 }
 
+func IsNotInElevator(elevator Elevator, order Order) bool {
+	for i :=0; i < MAX_ORDERS; i++{
+		if elevator.OrderQueue[i] == order{
+			return false
+		}else if elevator.OrderQueue[i].Floor == 0{
+				return true
+		}
+	}
+	return true
+}
+
 
 
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderChan chan Order, sendLocalOrdersChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator){
-		
+	
+	//testvars
+	timedUpdateChanDriver := make(chan string)
+	IP := "some IP"
+	//OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
+	OrderQueue := make([]Order, MAX_ORDERS)
+	elevator := Elevator{IP, OrderQueue, MOVE_STOP, 0}
+	elevators := []Elevator{elevator}
+	localElevatorIndex := 0
+	
 
+	var updateElevator Elevator
+	var localOrder Order
+
+
+	/*
 	//Variables
 	var newOrder, localOrder Order
 	var localCost, receivedCost Cost
@@ -188,16 +213,21 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	elevators[localElevatorIndex] = updateElevator
 
 	go TimedUpdate(timedUpdateChanNetwork)
+	*/
 	go TimedUpdate(timedUpdateChanDriver)
-
 
 	//Listening and handling
 	for{
 		fmt.Println("queue : ", elevators)
 		select{
+		// RULING OUT CHANNEL WAITING FOR NOW
+		//-------------------------------------
 		//receiving updates from other modules
+
 		case updateElevator = <- receiveDriverUpdateChan:
-			elevators[localElevatorIndex] = updateElevator
+			elevators[localElevatorIndex].Direction = updateElevator.Direction
+			elevators[localElevatorIndex].LastFloor = updateElevator.LastFloor
+		/*
 		case updateElevator = <- receiveElevatorChan: // Recieves updates from all-over, updates accordingly
 			for i := 0; i < N_ELEVATORS; i++{
 				if elevators[i].Ip == updateElevator.Ip{
@@ -205,19 +235,22 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					break
 				}
 			}
-		//Updating the other modules
-			/* RULING OUT CHANNEL WAITING FOR NOW
+		//Updating the other module
 		case <- timedUpdateChanNetwork: // Timed update to network
 			updateNetworkChan <- elevators[localElevatorIndex]
+		*/
 		case <- timedUpdateChanDriver:
 			updateDriverChan <- elevators[localElevatorIndex]
-			 */
 		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
-			if localOrder.Orientation == ORDER_INTERNAL{
-				InsertOrder(elevators[localElevatorIndex], localOrder) //send explisit update?
-			}else{
-				sendLocalOrdersChan <- localOrder
+			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
+				//if localOrder.Orientation == ORDER_INTERNAL{
+					InsertOrder(elevators[localElevatorIndex], localOrder)
+					updateDriverChan <- elevators[localElevatorIndex]
+				//}else{
+				//	sendLocalOrdersChan <- localOrder
+				//}
 			}
+			/*
 			updateNetworkChan <- elevators[localElevatorIndex]
 		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
 			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
@@ -242,6 +275,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					HandleDeadElev(elevators, changedElevator.Ip, sendLocalOrdersChan)
 				}
 			}
+		*/
 		}
 	}
 }

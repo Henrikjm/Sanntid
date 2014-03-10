@@ -3,6 +3,7 @@ package driver
 import (
 	"time"
 	."types"
+
 )
 
 
@@ -108,17 +109,14 @@ func SetFloorIndicatorLight(floor int) {
 //READS
 func GetStopButton(){
 	for{
-		time.Sleep(time.Millisecond*50)
-		if ReadBit(STOP){
-			stopButtonChannel <- true
-		}
+		stopButtonChannel <- ReadBit(STOP)
 	}
 }
 func GetObstruction() { ReadBit(OBSTRUCTION) }
 
 func GetOrderButton(localOrdersChan chan Order){
 	for{
-		time.Sleep(time.Millisecond*5)
+		time.Sleep(time.Millisecond*1)
 		switch{
 		case ReadBit(FLOOR_UP1):
 			localOrdersChan <- Order{1,ORDER_UP}
@@ -182,11 +180,11 @@ func MotorControl() {
 		} else if newDir == MOVE_UP {
 			ClearBit(MOTORDIR)
 			WriteAnalog(MOTOR, MAXSPEED)
-			time.Sleep(time.Second*1)
+			
 		} else if newDir == MOVE_DOWN {
 			SetBit(MOTORDIR)
 			WriteAnalog(MOTOR, MAXSPEED)
-			time.Sleep(time.Second*1)
+			
 		} else {
 			WriteAnalog(MOTOR, MINSPEED)
 		}
