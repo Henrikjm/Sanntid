@@ -12,7 +12,7 @@ const(
 	N_ELEVATORS int = 2
 
 
-	MAXSPEED int = 4048
+	MAXSPEED int = 3048
 	MINSPEED int = 2048
 
 	ORDER_UP OrderDir = iota //matched with FLOOR for actuall order

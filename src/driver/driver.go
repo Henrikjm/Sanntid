@@ -13,68 +13,78 @@ func ClearAllLights() {
 }
 func ClearDoorOpenLight() { ClearBit(DOOR_OPEN) }
 func ClearStopLight()     { ClearBit(LIGHT_STOP) }
-func ClearOrderLight(floor int, dir OrderDir) {
-	switch {
-	case floor == 1 && dir == ORDER_UP:
-		ClearBit(LIGHT_UP1)
-	case floor == 2 && dir == ORDER_UP:
-		ClearBit(LIGHT_UP2)
-	case floor == 3 && dir == ORDER_UP:
-		ClearBit(LIGHT_UP3)
-	case floor == 2 && dir == ORDER_DOWN:
-		ClearBit(LIGHT_DOWN2)
-	case floor == 3 && dir == ORDER_DOWN:
-		ClearBit(LIGHT_DOWN3)
-	case floor == 4 && dir == ORDER_DOWN:
-		ClearBit(LIGHT_DOWN4)
-	case floor == 1 && dir == ORDER_INTERNAL:
-		ClearBit(LIGHT_COMMAND1)
-	case floor == 2 && dir == ORDER_INTERNAL:
-		ClearBit(LIGHT_COMMAND2)
-	case floor == 3 && dir == ORDER_INTERNAL:
-		ClearBit(LIGHT_COMMAND3)
-	case floor == 4 && dir == ORDER_INTERNAL:
-		ClearBit(LIGHT_COMMAND4)
+func ClearOrderLight(){
+	for{
+		order := <- clearOrderLightChannel
+		//fmt.Println(order)
+		switch {
+		case order.Floor == 1 && order.Orientation == ORDER_UP:
+			ClearBit(LIGHT_UP1)
+		case order.Floor == 2 && order.Orientation == ORDER_UP:
+			ClearBit(LIGHT_UP2)
+		case order.Floor == 3 && order.Orientation == ORDER_UP:
+			ClearBit(LIGHT_UP3)
+		case order.Floor == 2 && order.Orientation == ORDER_DOWN:
+			ClearBit(LIGHT_DOWN2)
+		case order.Floor == 3 && order.Orientation == ORDER_DOWN:
+			ClearBit(LIGHT_DOWN3)
+		case order.Floor == 4 && order.Orientation == ORDER_DOWN:
+			ClearBit(LIGHT_DOWN4)
+		case order.Floor == 1 && order.Orientation == ORDER_INTERNAL:
+			ClearBit(LIGHT_COMMAND1)
+		case order.Floor == 2 && order.Orientation == ORDER_INTERNAL:
+			ClearBit(LIGHT_COMMAND2)
+		case order.Floor == 3 && order.Orientation == ORDER_INTERNAL:
+			ClearBit(LIGHT_COMMAND3)
+		case order.Floor == 4 && order.Orientation == ORDER_INTERNAL:
+			ClearBit(LIGHT_COMMAND4)
+		}
+	
 	}
 }
 
 func ClearAllOrderLights() {
-	ClearOrderLight(1, ORDER_UP)
-	ClearOrderLight(2, ORDER_UP)
-	ClearOrderLight(3, ORDER_UP)
-	ClearOrderLight(2, ORDER_DOWN)
-	ClearOrderLight(3, ORDER_DOWN)
-	ClearOrderLight(4, ORDER_DOWN)
-	ClearOrderLight(1, ORDER_INTERNAL)
-	ClearOrderLight(1, ORDER_INTERNAL)
-	ClearOrderLight(1, ORDER_INTERNAL)
-	ClearOrderLight(1, ORDER_INTERNAL)
+	clearOrderLightChannel <- Order{1, ORDER_UP}
+	clearOrderLightChannel <- Order{2, ORDER_UP}
+	clearOrderLightChannel <- Order{3, ORDER_UP}
+	clearOrderLightChannel <- Order{2, ORDER_DOWN}
+	clearOrderLightChannel <- Order{3, ORDER_DOWN}
+	clearOrderLightChannel <- Order{4, ORDER_DOWN}
+	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
+	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
+	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
+	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
 }
 
 func SetDoorOpenLight() { SetBit(DOOR_OPEN) }
 func SetStopLight()     { SetBit(LIGHT_STOP) }
-func SetOrderLight(order Order) {
-	switch {
-	case order.Floor == 1 && order.Orientation == ORDER_UP:
-		SetBit(LIGHT_UP1)
-	case order.Floor == 2 && order.Orientation== ORDER_UP:
-		SetBit(LIGHT_UP2)
-	case order.Floor == 3 && order.Orientation == ORDER_UP:
-		SetBit(LIGHT_UP3)
-	case order.Floor == 2 && order.Orientation == ORDER_DOWN:
-		SetBit(LIGHT_DOWN2)
-	case order.Floor == 3 && order.Orientation == ORDER_DOWN:
-		SetBit(LIGHT_DOWN3)
-	case order.Floor == 4 && order.Orientation == ORDER_DOWN:
-		SetBit(LIGHT_DOWN4)
-	case order.Floor == 1 && order.Orientation == ORDER_INTERNAL:
-		SetBit(LIGHT_COMMAND1)
-	case order.Floor == 2 && order.Orientation == ORDER_INTERNAL:
-		SetBit(LIGHT_COMMAND2)
-	case order.Floor == 3 && order.Orientation == ORDER_INTERNAL:
-		SetBit(LIGHT_COMMAND3)
-	case order.Floor == 4 && order.Orientation == ORDER_INTERNAL:
-		SetBit(LIGHT_COMMAND4)
+func SetOrderLights(){
+	for{
+		orders := <- setOrderLightChannel
+		for i:= 0; i < MAX_ORDERS; i++{
+			switch {
+			case orders[i].Floor == 1 && orders[i].Orientation == ORDER_UP:
+				SetBit(LIGHT_UP1)
+			case orders[i].Floor == 2 && orders[i].Orientation== ORDER_UP:
+				SetBit(LIGHT_UP2)
+			case orders[i].Floor == 3 && orders[i].Orientation == ORDER_UP:
+				SetBit(LIGHT_UP3)
+			case orders[i].Floor == 2 && orders[i].Orientation == ORDER_DOWN:
+				SetBit(LIGHT_DOWN2)
+			case orders[i].Floor == 3 && orders[i].Orientation == ORDER_DOWN:
+				SetBit(LIGHT_DOWN3)
+			case orders[i].Floor == 4 && orders[i].Orientation == ORDER_DOWN:
+				SetBit(LIGHT_DOWN4)
+			case orders[i].Floor == 1 && orders[i].Orientation == ORDER_INTERNAL:
+				SetBit(LIGHT_COMMAND1)
+			case orders[i].Floor == 2 && orders[i].Orientation == ORDER_INTERNAL:
+				SetBit(LIGHT_COMMAND2)
+			case orders[i].Floor == 3 && orders[i].Orientation == ORDER_INTERNAL:
+				SetBit(LIGHT_COMMAND3)
+			case orders[i].Floor == 4 && orders[i].Orientation == ORDER_INTERNAL:
+				SetBit(LIGHT_COMMAND4)
+			}
+		}
 	}
 }
 
@@ -96,7 +106,14 @@ func SetFloorIndicatorLight(floor int) {
 }
 
 //READS
-func GetStopButton()  { ReadBit(STOP) }
+func GetStopButton(){
+	for{
+		time.Sleep(time.Millisecond*50)
+		if ReadBit(STOP){
+			stopButtonChannel <- true
+		}
+	}
+}
 func GetObstruction() { ReadBit(OBSTRUCTION) }
 
 func GetOrderButton(localOrdersChan chan Order){
@@ -151,9 +168,7 @@ func MotorControl() {
 	currentDir := MOVE_STOP
 	WriteAnalog(MOTOR, MINSPEED)
 	for {
-
 		newDir := <-motorChannel
-
 		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
 			SetBit(MOTORDIR)
 			time.Sleep(time.Millisecond * 20)
@@ -175,8 +190,6 @@ func MotorControl() {
 		} else {
 			WriteAnalog(MOTOR, MINSPEED)
 		}
-		currentDir = newDir
-		time.Sleep(time.Millisecond*5)
 	}
 }
 
@@ -185,4 +198,7 @@ func MotorControl() {
 //VARIABLES
 var motorChannel chan MoveDir
 var readFloorChannel chan int
+var setOrderLightChannel chan []Order
+var clearOrderLightChannel chan Order
+var stopButtonChannel chan bool
 
