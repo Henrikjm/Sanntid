@@ -168,7 +168,7 @@ func MotorControl() {
 	currentDir := MOVE_STOP
 	WriteAnalog(MOTOR, MINSPEED)
 	for {
-		newDir := <-motorChannel
+		newDir = <-motorChannel
 		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
 			SetBit(MOTORDIR)
 			time.Sleep(time.Millisecond * 20)
@@ -196,6 +196,7 @@ func MotorControl() {
 
 
 //VARIABLES
+var newDir MoveDir
 var motorChannel chan MoveDir
 var readFloorChannel chan int
 var setOrderLightChannel chan []Order

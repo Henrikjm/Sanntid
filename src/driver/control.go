@@ -2,7 +2,7 @@ package driver
  
  import (
 	"fmt"
-	"time"
+	//"time"
 	."types"
 )
 
@@ -60,7 +60,7 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 	
 	go MotorControl()
 	//go GetOrderButton(localOrdersChan)
-	go SetOrderLights()
+	//go SetOrderLights()
 	//go ClearOrderLight()
 	//go GetStopButton()
 	//ClearAllLights()
@@ -101,15 +101,17 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 				state = "floor"
 			}
 		case "floor":
-				if elevator.LastFloor == elevator.OrderQueue[0].Floor{
-					motorChannel <- MOVE_STOP
-					elevator.Direction = MOVE_STOP
-					state = "arrived"
-				}
-				SetFloorIndicatorLight(reachedFloor)
+			if elevator.LastFloor == elevator.OrderQueue[0].Floor{
+				motorChannel <- MOVE_STOP
+				elevator.Direction = MOVE_STOP
+				state = "arrived"
+			}else{
+				state = "moving"
+			}
+			SetFloorIndicatorLight(reachedFloor)
 		case "arrived":
 			fmt.Println(state)
-			time.Sleep(time.Second*2)
+			//time.Sleep(time.Second*2)
 			state = "idle"
 		case "idle":
 			fmt.Println(state)
