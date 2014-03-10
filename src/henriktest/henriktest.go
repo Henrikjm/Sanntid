@@ -10,6 +10,12 @@ type KEEEG struct{
 	I int
 	Kek string
 }
+
+func Testing(kek chan map[string]string){
+	hei := make(map[string]string)
+	kek<- hei
+}
+
 func main(){
 
 
