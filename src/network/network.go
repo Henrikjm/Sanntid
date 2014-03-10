@@ -73,6 +73,8 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 				updateForCostChan<-aliveMap
 			case <-requestAliveChan:
 				requestAliveChan<-aliveMap
+			case <-updateForConfirmationChan:
+				updateForConfirmationChan <- aliveMap
 			default:
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
 					if time.Now().Sub(value) > 500000000 {
@@ -154,7 +156,7 @@ func SendOrderToUDP(orderChannel chan Order, chan costChan map[string]cost.Cost)
 	go RecieveOrderConfirmation(orderConfirmationChan, order)
 	for  /*Should consider adding a limitation to # of tries*/{
 	orderB,_ := json.Marshal(order)
-	conn.Write([]byte(order))
+	conn.Write([]byte(orderB))
 
 	if <-orderConfirmationChan{
 		break
@@ -180,7 +182,7 @@ func RecieveCost(order Order, recieveCostChan chan map[string]cost.Cost) bool{//
 
 	costMap := make(map[string]cost.Cost)
 
-	//Les UDP i ett sekund eller til alle har levert cost rapport
+	//Les UDP i 500ms eller til alle har levert cost rapport
 	costInstance := make(Cost)
 	data := make([]byte, 1024)
 	t0 := time.Now()
@@ -236,18 +238,57 @@ func MakeSenderConn() *net.UDPConn{
 
 }
 
-func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order){ //IKKE FERDIG
+func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order) bool{ //IKKE TESTET
+	//INITIALISERINGER
 	conn := MakeListenerConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
-	_,err := conn.ReadFromUDP(data)
+	confirmationMap := make(map[string]string)
+	aliveMap := make(map[string]time.Time)
+	
+	//HENTER INN ANTALL MASKINER
+	updateForConfirmationChan<-aliveMap
+	aliveMap := <- updateForConfirmationChan
+	t0 := time.Now() //REFERANSETID
+	
+	//VENTER I 500MS PÅ SVAR FRA ALLE MASKINER
+	for{
+		_,addr,err := conn.ReadFromUDP(data)
+		CheckError(err, "ERROR!! RecieveOrderConfirmation")
+		confirmationMap[addr] := data
 
-
-
+		if len(confirmationMap) == len(confirmationMap) {
+			return true
+		}
+		if time.Now().Sub(t0) > 500000000{
+			return false
+		}
+	}
 }
 
-func SendElevator(){}//IKKE FERDIG
+func SendElevator(SOMEELEVATORCHAN chan Elevator){
+	conn := MakeSenderConn(ELEVATORPORT)
+	data := make([]byte, 1024)
 
-func RecieveElevator(){}//IKKE FERDIG
+	//SEND REQUEST
+
+	//MOTTA SVAR
+	elevator := <- SOMEELEVATORCHAN
+	orderB,_ := json.Marshal(elevator)
+	conn.Write([]byte(order))
+	//TA INN ELEVATOR FRA QUEUE
+
+
+
+
+
+}//IKKE FERDIG
+
+func RecieveElevator(){
+	conn := MakeListenerConn(ELEVATORPORT)
+	data := make([]byte, 1024)
+
+
+}//IKKE FERDIG
 
 func NetworkHandler(localIpChan chan string, updateFromAliveChan chan map[string]time.Time){//IKKE FERDIG
 	aliveChan := make(chan string)

@@ -11,14 +11,19 @@ import (
 )
 
 
+type KEEEG struct{
 
+	i int = 0
+	kek string = "lol"
+}
 
 
 func main() {
 	
 	
 	//test := network.TestVariable{1,"he"}
-	test := "hei"
+	
+	var test KEEEG
 	stringB,_ := json.Marshal(test)
 	fmt.Println(stringB, test)
 
