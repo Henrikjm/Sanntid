@@ -56,12 +56,12 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 	go RecieveAliveUDP(aliveChan)
 
 	aliveMap := make(map[string]time.Time)
-	var lengthOfMap int = 0
+
 
 	for {	
 		select{
 			case incomingIP := <-aliveChan:
-				if val,ok := aliveMap[incomingIP]; ok {
+				if _,ok := aliveMap[incomingIP]; ok {
 					aliveMap[incomingIP] = time.Now()
 				}else{
 					aliveMap[incomingIP]=time.Now()
@@ -146,12 +146,12 @@ func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[stri
 	//bekreft mottat ordre
 }
 
-func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost){//IKKE FERDIG
+func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool)
 	for{
 	order := <- orderChannel
-	go RecieveOrderConfirmation(orderConfirmationChan, order)
+	go RecieveOrderConfirmation(orderConfirmationChan, order, updateForConfirmationChan)
 	for  /*Should consider adding a limitation to # of tries*/{
 	orderB,_ := json.Marshal(order)
 	conn.Write([]byte(orderB))
@@ -237,11 +237,11 @@ func MakeSenderConn(port string) *net.UDPConn{
 
 }
 
-func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order) bool{ //IKKE TESTET
+func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order, updateForConfirmationChan chan map[string]time.Time) bool{ //IKKE TESTET
 	//INITIALISERINGER
 	conn := MakeListenerConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
-	confirmationMap := make(map[string]string)
+	confirmationMap := make(map[string]time.Time)
 	aliveMap := make(map[string]time.Time)
 	
 	//HENTER INN ANTALL MASKINER
@@ -253,7 +253,7 @@ func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order) bool
 	for{
 		_,addr,err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR!! RecieveOrderConfirmation")
-		confirmationMap[addr] = data
+		confirmationMap[addr.String()] = time.Now()
 
 		if len(confirmationMap) == len(confirmationMap) {
 			return true
@@ -266,14 +266,14 @@ func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order) bool
 
 func SendElevator(SOMEELEVATORCHAN chan Elevator){
 	conn := MakeSenderConn(ELEVATORPORT)
-	data := make([]byte, 1024)
+	//data := make([]byte, 1024)
 
 	//SEND REQUEST
 	//SOMEELEVATORCHAN <- REQUEST
 	//MOTTA SVAR
-	//elevator := <- //SOMEELEVATORCHAN
-	orderB,_ := json.Marshal(elevator)
-	conn.Write([]byte(order))
+	elevator := <- SOMEELEVATORCHAN
+	elevatorB,_ := json.Marshal(elevator)
+	conn.Write([]byte(elevatorB))
 	//TA INN ELEVATOR FRA QUEUE
 
 
@@ -283,18 +283,21 @@ func SendElevator(SOMEELEVATORCHAN chan Elevator){
 }//IKKE FERDIG
 
 func RecieveElevator(){
-	conn := MakeListenerConn(ELEVATORPORT)
-	data := make([]byte, 1024)
+	//conn := MakeListenerConn(ELEVATORPORT)
+	//data := make([]byte, 1024)
 
 
 }//IKKE FERDIG
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan map[string]time.Time){//IKKE FERDIG
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change){//IKKE FERDIG
 	aliveChan := make(chan string)
 	requestAliveChan := make(chan map[string]time.Time)
+	updateForConfirmationChan := make(chan map[string]time.Time)
+	updateForCostChan := make(chan map[string]time.Time)
 
-	
-	go localIpSender(localIpChan)
-	go updateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan)
+
+	go LocalIpSender(localIpChan)
+	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
+	 
 }
 
