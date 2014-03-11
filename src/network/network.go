@@ -98,9 +98,10 @@ func GetLocalIp() string {
 }
 
 func LocalIpSender(localIpChan chan string){
+	ip := GetLocalIp()
 	for{
 		<-localIpChan
-		localIpChan<-GetLocalIp()
+		localIpChan<-ip
 	}
 }
 

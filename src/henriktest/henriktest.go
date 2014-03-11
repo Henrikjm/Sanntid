@@ -50,9 +50,9 @@ func main(){
 */
 
 	
-	localIpChan := make(chan string)
+	localIpChan := make(chan string,2)
 	updateFromAliveChan := make(chan Change)
-	sendCostChan := make(chan Cost)
+	sendCostChan := make(chan Cost,2)
 	newOrderChan := make(chan Order)
 	recieveCostChan := make(chan map[string]Cost)
 	orderChannel := make(chan Order)
@@ -76,7 +76,9 @@ func main(){
 			orderChannel<-newOrder
 		case  <- newOrderChan:
 			fmt.Println("Sending cost")
-			sendCostChan <- Cost{1, Order{1,1}, network.GetLocalIp()}
+			var ip string
+			localIpChan <- ip
+			sendCostChan <- Cost{1, Order{1,1}, <-localIpChan}
 			fmt.Println("Cost sendt")
 		
 
