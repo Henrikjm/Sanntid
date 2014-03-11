@@ -18,12 +18,14 @@ const (
 )
 
 
+//OK
 func CheckError(err error, errorMsg string) {
 	if err != nil {
 		fmt.Println("!!Error type: " + errorMsg,"!!")
 	}
 }
 
+//OK
 func ImAliveUDP() {
 	fmt.Println("Establishing IAmAlive...")
 	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+ALIVEPORT)
@@ -32,25 +34,27 @@ func ImAliveUDP() {
 	CheckError(err, "ERROR while dialing")
 	msg := "ImAlive!"
 	for {
-		time.Sleep(time.Millisecond * 300)
+		
 		conn.Write([]byte(msg))
 	}
 }
 
+//OK
 func RecieveAliveUDP(aliveChan chan string){
 	data := make([]byte, 1024)
 	conn := MakeListenerConn(ALIVEPORT)
 	for {		
 		_, addr, err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR ReadFromUDP")
+		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":") //Fjerner PORT og semikolon
 
-		if (string(data) == "ImAlive!"){
-			aliveChan <- addr.String()//add/update alive map
-		}
+		aliveChan <- ip //add/update alive map
+		
 	}
 
 }
 
+//OK
 func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
 	go ImAliveUDP()
 	go RecieveAliveUDP(aliveChan)
@@ -80,6 +84,7 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 						updateFromAliveChan <- Change{"dead", ip}
 					}
 				}
+				
 		}
 	}
 }
@@ -126,11 +131,12 @@ func ListenToOrderUDP(conn *net.UDPConn, incoming *chan string) {
 
 func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
 	conn := MakeListenerConn(ORDERPORT)
+	sender := MakeSenderConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
 	for {
 		_, _, err := conn.ReadFromUDP(data) 	//motta ordre
 		CheckError(err, "ERROR ReadFromUDP")
-		
+		sender.Write([]byte("OrderRecieved"))
 		var newOrder Order
 		json.Unmarshal(data, &newOrder)
 		
@@ -147,18 +153,17 @@ func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[stri
 }
 
 
-//IF_SETNING MÅ FIKSES
 func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool)
 	for{
 	order := <- orderChannel //Venter på ordre
-	go RecieveOrderConfirmation(orderConfirmationChan, order, updateForConfirmationChan) //Starter en bekreftelsesrutine
+	
 	for  /*Should consider adding a limitation to # of tries*/{
 	orderB,_ := json.Marshal(order) //sender ut ordren til den har fått bekreftet at alle har mottatt
 	conn.Write([]byte(orderB))
 
-	if <-orderConfirmationChan{ //sjekker bekreftelse, HER VIL DEN STOPPE??
+	if RecieveOrderConfirmation(order, updateForConfirmationChan){ //sjekker bekreftelse, HER VIL DEN STOPPE??
 		break
 		}
 	}
@@ -167,7 +172,6 @@ func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost, upda
 
 func SendCost(sendCostChan chan Cost, newOrderChan chan Order) { //Designet for å være goroutine.
 	sender := MakeSenderConn(COSTPORT)
-	var newOrder Order
 	for{
 	cost := <- sendCostChan
 	costB,_ := json.Marshal(cost)
@@ -240,7 +244,7 @@ func MakeSenderConn(port string) *net.UDPConn{
 
 }
 
-func RecieveOrderConfirmation(orderConfirmationChan chan bool, order Order, updateForConfirmationChan chan map[string]time.Time) bool{ //IKKE TESTET
+func RecieveOrderConfirmation(order Order, updateForConfirmationChan chan map[string]time.Time) bool{ //IKKE TESTET
 	conn := MakeListenerConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
 	confirmationMap := make(map[string]time.Time)
@@ -304,4 +308,3 @@ func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change){//
 	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
 	 
 }
-
