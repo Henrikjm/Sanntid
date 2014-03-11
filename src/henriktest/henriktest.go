@@ -50,7 +50,7 @@ func main(){
 */
 
 	
-	localIpChan := make(chan string,2)
+	localIpChan := make(chan string,2git )
 	updateFromAliveChan := make(chan Change)
 	sendCostChan := make(chan Cost,2)
 	newOrderChan := make(chan Order)
