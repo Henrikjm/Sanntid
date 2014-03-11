@@ -1,5 +1,7 @@
 package types
 
+
+
 type(
 	MoveDir int
 	OrderDir int

@@ -56,6 +56,7 @@ func RecieveAliveUDP(aliveChan chan string){
 
 //OK
 func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
+	fmt.Println("UpdateAliveUDP Started")
 	go ImAliveUDP()
 	go RecieveAliveUDP(aliveChan)
 
@@ -104,7 +105,7 @@ func LocalIpSender(localIpChan chan string){
 }
 
 
-func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
+func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
 	conn := MakeListenerConn(ORDERPORT)
 	sender := MakeSenderConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
@@ -112,13 +113,14 @@ func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[stri
 		_, _, err := conn.ReadFromUDP(data) 	//motta ordre
 		CheckError(err, "ERROR ReadFromUDP")
 		sender.Write([]byte("OrderRecieved"))
-		
 		var newOrder Order
 		json.Unmarshal(data, &newOrder)
 		
+		fmt.Println("New order recieved. Waiting for cost evaluations.")
 		for{
-			newOrdersChan <- newOrder //videresend ordre til costevaluering
+			newOrderChan <- newOrder //videresend ordre til costevaluering
 			if RecieveCost(newOrder , recieveCostChan, updateForCostChan){ //Vent til all cost er mottat og så send dette til kømodul
+				fmt.Println("All cost evaluations recieved. Breaking loop.")
 				break
 			}
 		}
@@ -130,36 +132,41 @@ func RecieveOrderFromUDP(newOrdersChan chan Order, recieveCostChan chan map[stri
 func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool, 1)
-
-	
-
-
-
+	status := 1
 	for{
-	order := <- orderChannel //Venter på ordre
-	go RecieveOrderConfirmation(order, orderConfirmationChan, updateForConfirmationChan)
-	for  i := 0; i < 50; i++{
-	orderB,_ := json.Marshal(order) //sender ut ordren til den har fått bekreftet at alle har mottatt
-	conn.Write([]byte(orderB))
+		order := <- orderChannel //Venter på ordre
+		fmt.Println("Sending order. Waiting for RecieveOrderConfirmation.")
+		go RecieveOrderConfirmation(order, orderConfirmationChan, updateForConfirmationChan)
+		for  i := 0; i < 50; i++{
+		orderB,_ := json.Marshal(order) //sender ut ordren til den har fått bekreftet at alle har mottatt
+		conn.Write([]byte(orderB))
 
-	if <- orderConfirmationChan{ //Sjekker bekreftelse, orderConfimartionChan er buffered med 1
-		break
+		if <- orderConfirmationChan{ //Sjekker bekreftelse, orderConfimartionChan er buffered med 1
+			fmt.Println("OrderConfirmation received. Breaking loop.")
+			status = 0
+			break
+			}
+
 		}
-	}
-	fmt.Println("ERROR!! SendOrder failed.")
+		if status == 1{
+			fmt.Println("ERROR!! SendOrder failed.")
+		}
 	}
 }
 
-func SendCost(sendCostChan chan Cost, newOrderChan chan Order) { //Designet for å være goroutine.
+func SendCost(sendCostChan chan Cost) {
 	sender := MakeSenderConn(COSTPORT)
 	for{
+	fmt.Println("!!!!!!SendCost waiting...!!!!!")
 	cost := <- sendCostChan
+	fmt.Println("!!!!!SendCost recieved work...!!!!")
 	costB,_ := json.Marshal(cost)
+	fmt.Println("Sending cost evaluation to UDP.")
 	sender.Write(costB)
 	}
 }
 
-func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) bool{//IKKE FERDIG
+func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) bool{
 	conn := MakeListenerConn(COSTPORT)
 	aliveMap := make(map[string]time.Time)
 	costMap := make(map[string]Cost)
@@ -174,33 +181,36 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 
 	//Lytter til UDP i 500ms eller til alle har levert "kostrapport". Dersom alle leverer kost vil den videresende et Map med IP og kost
 	t0 := time.Now()
-
+	fmt.Println("Listening for cost updates.")
 	for {
-		
-
+		fmt.Println("0")
 		conn.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Millisecond))
 		_,_,err := conn.ReadFromUDP(data)
+		fmt.Println("0.5")
 
-		if err.Error() != ("read udp4 0.0.0.0:"+ COSTPORT +": i/o timeout"){
+		if (err != nil) && (err.Error() != ("read udp4 0.0.0.0:"+ COSTPORT +": i/o timeout")) {
+			fmt.Println("IFIFIFI")
 			CheckError(err, "ERROR!! while recieving cost")
 		}
 
-
+		fmt.Println("1")
 		json.Unmarshal(data, &costInstance)
-
 		if costInstance.Order == order{ //Legger til
 			costMap[costInstance.Ip] = costInstance
 		}
-
+		fmt.Println("2")
 		if len(costMap) == len(aliveMap){ //Sjekker om vi har fått svar fra alle
 			recieveCostChan <- costMap
+			fmt.Println("Cost recived from everyone. Forwarding results.")
 			return true
 		}
-
+		fmt.Println("3")
 		if time.Now().Sub(t0) > 500000000{ //Sjekker om vi har brukt >500ms
+			fmt.Println("Cost listen timed out.")
 			break
 		}
 	}
+	fmt.Println("4")
 	conn.Close()
 	return false
 }
@@ -208,9 +218,9 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 func MakeListenerConn(port string) *net.UDPConn{
 	udpAddr, err := net.ResolveUDPAddr("udp4", ":"+port)
 	CheckError(err, "ERROR while resolving UDPaddr for listen")
-	fmt.Println("Establishing ListenToNetwork")
+	//fmt.Println("Establishing ListenToNetwork")
 	conn, err := net.ListenUDP("udp4", udpAddr)
-	fmt.Println("Listening on port ", udpAddr.String())
+	//fmt.Println("Listening on port ", udpAddr.String())
 	CheckError(err, "Error while establishing listening connection")
 	return conn
 }
@@ -277,20 +287,25 @@ func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet
 	}	
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, newOrdersChan chan Order, recieveCostChan chan map[string]Cost, orderChannel chan Order,
- costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChannel chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
+
+	fmt.Println("NetworkHandler Started...")
+
 	aliveChan := make(chan string)
 	requestAliveChan := make(chan map[string]time.Time)
 	updateForConfirmationChan := make(chan map[string]time.Time)
 	updateForCostChan := make(chan map[string]time.Time)
 
-
+	go SendCost(sendCostChan)
 	go LocalIpSender(localIpChan)
 	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
 	go SendOrderToUDP(orderChannel, costChan, updateForConfirmationChan)
-	go RecieveOrderFromUDP(newOrdersChan, recieveCostChan, updateForCostChan)
-	go SendCost(sendCostChan, newOrderChan)
+	go RecieveOrderFromUDP(newOrderChan, recieveCostChan, updateForCostChan)
+	
 	go SendElevator(updateNetworkChan)
 	go RecieveElevator(receiveElevatorChan)
+
+	for{time.Sleep(time.Millisecond * 200)
+	}
 	 
 }

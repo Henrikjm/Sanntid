@@ -2,14 +2,17 @@ package main
 
 //import "net"
 import "fmt"
-import "time"
+//import "time"
 //import "encoding/json"
 import "network"
 import ."types"
 
 
+
 func main(){
 
+
+/*
 	aliveChan := make(chan string)
 	updateFromAliveChan := make(chan Change)
 	requestAliveChan := make(chan map[string]time.Time)
@@ -44,6 +47,43 @@ func main(){
 		
 
 	}
+*/
 
+	
+	localIpChan := make(chan string)
+	updateFromAliveChan := make(chan Change)
+	sendCostChan := make(chan Cost)
+	newOrderChan := make(chan Order)
+	recieveCostChan := make(chan map[string]Cost)
+	orderChannel := make(chan Order)
+ 	costChan := make(chan map[string]Cost)
+ 	updateNetworkChan := make(chan Elevator)
+ 	receiveElevatorChan := make(chan Elevator)
+
+ 	fmt.Println("Starting...")
+	go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan , newOrderChan, recieveCostChan, orderChannel,
+ costChan, updateNetworkChan, receiveElevatorChan)
+
+	newOrder := Order{1, 1}
+	var change Change
+	for{
+		select{
+		case <- recieveCostChan:
+			fmt.Println("Loop complete?")
+
+		case change = <-updateFromAliveChan:
+			fmt.Println(change)
+			orderChannel<-newOrder
+		case  <- newOrderChan:
+			fmt.Println("Sending cost")
+			sendCostChan <- Cost{1, Order{1,1}, network.GetLocalIp()}
+			fmt.Println("Cost sendt")
+		
+
+
+		}
+		
+		
+	}
 
 }
