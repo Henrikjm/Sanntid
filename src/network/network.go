@@ -189,34 +189,27 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 	t0 := time.Now()
 	fmt.Println("Listening for cost updates.")
 	for {
-		fmt.Println("0")
+
 		conn.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Millisecond))
 		_,_,err := conn.ReadFromUDP(data)
-		fmt.Println("0.5")
 
 		if (err != nil) && (err.Error() != ("read udp4 0.0.0.0:"+ COSTPORT +": i/o timeout")) {
-			fmt.Println("IFIFIFI")
-			CheckError(err, "ERROR!! while recieving cost")
+				CheckError(err, "ERROR!! while recieving cost")
 		}
-
-		fmt.Println("1")
 		json.Unmarshal(data, &costInstance)
 		if costInstance.Order == order{ //Legger til
 			costMap[costInstance.Ip] = costInstance
 		}
-		fmt.Println("2")
 		if len(costMap) == len(aliveMap){ //Sjekker om vi har fått svar fra alle
 			recieveCostChan <- costMap
 			fmt.Println("Cost recived from everyone. Forwarding results.")
 			return true
 		}
-		fmt.Println("3")
 		if time.Now().Sub(t0) > 500000000{ //Sjekker om vi har brukt >500ms
 			fmt.Println("Cost listen timed out.")
 			break
 		}
 	}
-	fmt.Println("4")
 	conn.Close()
 	return false
 }
@@ -257,7 +250,7 @@ func RecieveOrderConfirmation(order Order, orderConfirmationChan chan bool, upda
 		CheckError(err, "ERROR!! RecieveOrderConfirmation")
 		confirmationMap[addr.String()] = time.Now()
 
-		if len(confirmationMap) == len(confirmationMap) {
+		if len(confirmationMap) == len(aliveMap) {
 			orderConfirmationChan <- true
 		}
 		if time.Now().Sub(t0) > 500000000{
