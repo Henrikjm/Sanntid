@@ -50,9 +50,9 @@ func main(){
 */
 
 	
-	localIpChan := make(chan string,2git )
+	localIpChan := make(chan string, 2)
 	updateFromAliveChan := make(chan Change)
-	sendCostChan := make(chan Cost,2)
+	sendCostChan := make(chan Cost, 2)
 	newOrderChan := make(chan Order)
 	recieveCostChan := make(chan map[string]Cost)
 	orderChannel := make(chan Order)
