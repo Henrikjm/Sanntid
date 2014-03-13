@@ -50,7 +50,7 @@ func main(){
 */
 
 	
-	localIpChan := make(chan string,2git )
+	localIpChan := make(chan string,2)
 	updateFromAliveChan := make(chan Change)
 	sendCostChan := make(chan Cost,2)
 	newOrderChan := make(chan Order)
@@ -59,9 +59,9 @@ func main(){
  	costChan := make(chan map[string]Cost)
  	updateNetworkChan := make(chan Elevator)
  	receiveElevatorChan := make(chan Elevator)
-
+ 	deadOrderChannel := make(chan Order)
  	fmt.Println("Starting...")
-	go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan , newOrderChan, recieveCostChan, orderChannel,
+	go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan , newOrderChan, recieveCostChan, orderChannel, deadOrderChannel,
  costChan, updateNetworkChan, receiveElevatorChan)
 
 	newOrder := Order{1, 1}
