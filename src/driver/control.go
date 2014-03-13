@@ -64,7 +64,6 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 	setOrderLightChannel = make(chan []Order)
 	clearOrderLightChannel = make(chan Order)
 	stopButtonChannel = make(chan bool)
-	testChannel := make(chan bool,1)
 	timedUpdateQueueChan := make(chan string)
 
 	//Function calls
@@ -96,7 +95,7 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 			elevator.OrderQueue = dummyElev.OrderQueue
 			setOrderLightChannel <- elevator.OrderQueue
 		default: //STATE MACHINE!
-			switch state{
+				switch state{
 			case "start":
 				elevator.Direction = MOVE_STOP
 				elevator.LastFloor = 0
@@ -117,12 +116,12 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 				fmt.Println(state)
 			case "moving":
 				reachedFloor = ReadFloor()
-				if ReadBit(STOP) {
+				/*if ReadBit(STOP) {
 					motorChannel <- MOVE_STOP 
 					state = "stop"
 					SetStopLight()
 					time.Sleep(time.Millisecond*500)
-				}else if reachedFloor > 0{ 
+				}else */if reachedFloor > 0{ 
 					elevator.LastFloor = reachedFloor
 					state = "floor"
 				}
@@ -156,14 +155,13 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 						fmt.Println(state)
 					}	
 				}
-			case "stop":
+			/*case "stop":
 				if ReadBit(STOP){
 					ClearStopLight()
 					state = "moving"
 					motorChannel <- elevator.Direction
 					time.Sleep(time.Second*1)
-					testChannel <- true
-				}
+				}*/
 			}
 		}
 	}

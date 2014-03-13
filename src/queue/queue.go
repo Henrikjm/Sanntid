@@ -129,7 +129,7 @@ func GetLocalElevatorIndex(elevators []Elevator, localIp string)int{
 	return -1
 }
 
-func HandleDeadElev(elevators []Elevator, ip string, sendLocalOrdersChan chan Order){
+func HandleDeadElev(elevators []Elevator, ip string, deadOrderChan chan Order){
 	var i int
 	var deadElevQueue []Order
 	for i = 0 ; i < N_ELEVATORS; i++{
@@ -139,7 +139,9 @@ func HandleDeadElev(elevators []Elevator, ip string, sendLocalOrdersChan chan Or
 		}
 	}
 	for i = 0; i < len(deadElevQueue); i++{
-		sendLocalOrdersChan <- deadElevQueue[i]
+		if deadElevQueue[i].Orientation != ORDER_INTERNAL{
+			deadOrderChan <- deadElevQueue[i]
+		}
 	}
 }
 
@@ -173,7 +175,7 @@ func IsNotInElevator(elevator Elevator, order Order) bool {
 
 
 
-func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderChan chan Order, sendLocalOrdersChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
+func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, deadOrderChan chan Order, newOrderChan chan Order, sendLocalOrdersChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator){
 	
 	//testvars

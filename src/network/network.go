@@ -130,12 +130,17 @@ func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[strin
 }
 
 
-func SendOrderToUDP(orderChannel chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
+func SendOrderToUDP(orderChannel chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool, 1)
 	status := 1
+	var order Order
 	for{
-		order := <- orderChannel //Venter på ordre
+		select{
+			case order = <- orderChannel: //Venter på ordre
+
+			case order = <- deadOrderChan:
+		}
 		fmt.Println("Sending order. Waiting for RecieveOrderConfirmation.")
 		go RecieveOrderConfirmation(order, orderConfirmationChan, updateForConfirmationChan)
 		for  i := 0; i < 50; i++{
@@ -184,34 +189,27 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 	t0 := time.Now()
 	fmt.Println("Listening for cost updates.")
 	for {
-		fmt.Println("0")
+
 		conn.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Millisecond))
 		_,_,err := conn.ReadFromUDP(data)
-		fmt.Println("0.5")
 
 		if (err != nil) && (err.Error() != ("read udp4 0.0.0.0:"+ COSTPORT +": i/o timeout")) {
-			fmt.Println("IFIFIFI")
-			CheckError(err, "ERROR!! while recieving cost")
+				CheckError(err, "ERROR!! while recieving cost")
 		}
-
-		fmt.Println("1")
 		json.Unmarshal(data, &costInstance)
 		if costInstance.Order == order{ //Legger til
 			costMap[costInstance.Ip] = costInstance
 		}
-		fmt.Println("2")
 		if len(costMap) == len(aliveMap){ //Sjekker om vi har fått svar fra alle
 			recieveCostChan <- costMap
 			fmt.Println("Cost recived from everyone. Forwarding results.")
 			return true
 		}
-		fmt.Println("3")
 		if time.Now().Sub(t0) > 500000000{ //Sjekker om vi har brukt >500ms
 			fmt.Println("Cost listen timed out.")
 			break
 		}
 	}
-	fmt.Println("4")
 	conn.Close()
 	return false
 }
@@ -252,7 +250,7 @@ func RecieveOrderConfirmation(order Order, orderConfirmationChan chan bool, upda
 		CheckError(err, "ERROR!! RecieveOrderConfirmation")
 		confirmationMap[addr.String()] = time.Now()
 
-		if len(confirmationMap) == len(confirmationMap) {
+		if len(confirmationMap) == len(aliveMap) {
 			orderConfirmationChan <- true
 		}
 		if time.Now().Sub(t0) > 500000000{
@@ -288,7 +286,7 @@ func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet
 	}	
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChannel chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChannel chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
 
 	fmt.Println("NetworkHandler Started...")
 
@@ -300,7 +298,7 @@ func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, se
 	go SendCost(sendCostChan)
 	go LocalIpSender(localIpChan)
 	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
-	go SendOrderToUDP(orderChannel, costChan, updateForConfirmationChan)
+	go SendOrderToUDP(orderChannel, deadOrderChan, costChan, updateForConfirmationChan)
 	go RecieveOrderFromUDP(newOrderChan, recieveCostChan, updateForCostChan)
 	
 	go SendElevator(updateNetworkChan)
