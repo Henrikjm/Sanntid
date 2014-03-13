@@ -130,14 +130,14 @@ func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[strin
 }
 
 
-func SendOrderToUDP(orderChannel chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
+func SendOrderToUDP(orderChan chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool, 1)
 	status := 1
 	var order Order
 	for{
 		select{
-			case order = <- orderChannel: //Venter på ordre
+			case order = <- orderChan: //Venter på ordre
 
 			case order = <- deadOrderChan:
 		}
@@ -286,7 +286,7 @@ func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet
 	}	
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChannel chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChan chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
 
 	fmt.Println("NetworkHandler Started...")
 
@@ -298,7 +298,7 @@ func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, se
 	go SendCost(sendCostChan)
 	go LocalIpSender(localIpChan)
 	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
-	go SendOrderToUDP(orderChannel, deadOrderChan, costChan, updateForConfirmationChan)
+	go SendOrderToUDP(orderChan, deadOrderChan, costChan, updateForConfirmationChan)
 	go RecieveOrderFromUDP(newOrderChan, recieveCostChan, updateForCostChan)
 	
 	go SendElevator(updateNetworkChan)
