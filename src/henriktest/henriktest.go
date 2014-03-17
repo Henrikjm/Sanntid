@@ -2,16 +2,25 @@ package main
 
 //import "net"
 import "fmt"
+import "driver"
 //import "time"
 //import "encoding/json"
-import "network"
+//import "network"
 import ."types"
+
 
 
 
 func main(){
 
+	driver.IoInit()
 
+	localOrderChan := make( chan Order)
+	go driver.GetOrderButton(localOrderChan)
+	for{
+		fmt.Println(driver.ReadBit(driver.FLOOR_UP1))
+	}
+}
 /*
 	aliveChan := make(chan string)
 	updateFromAliveChan := make(chan Change)
@@ -48,7 +57,7 @@ func main(){
 
 	}
 */
-
+/*
 	
 	localIpChan := make(chan string, 2)
 	updateFromAliveChan := make(chan Change)
@@ -81,11 +90,9 @@ func main(){
 			sendCostChan <- Cost{1, Order{1,1}, <-localIpChan}
 			fmt.Println("Cost sendt")
 		
+*/
 
-
-		}
 		
 		
-	}
-
-}
+		
+	

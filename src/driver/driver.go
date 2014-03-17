@@ -114,30 +114,30 @@ func GetStopButton(){
 }
 func GetObstruction() { ReadBit(OBSTRUCTION) }
 
-func GetOrderButton(localOrdersChan chan Order){
+func GetOrderButton(localOrderChan chan Order){
 	for{
 		time.Sleep(time.Millisecond*1)
 		switch{
 		case ReadBit(FLOOR_UP1):
-			localOrdersChan <- Order{1,ORDER_UP}
+			localOrderChan <- Order{1,ORDER_UP}
 		case ReadBit(FLOOR_UP2):
-			localOrdersChan <- Order{2, ORDER_UP}
+			localOrderChan <- Order{2, ORDER_UP}
 		case ReadBit(FLOOR_UP3):
-			localOrdersChan <- Order{3, ORDER_UP}
+			localOrderChan <- Order{3, ORDER_UP}
 		case ReadBit(FLOOR_DOWN2):
-			localOrdersChan <- Order{2, ORDER_DOWN}
+			localOrderChan <- Order{2, ORDER_DOWN}
 		case ReadBit(FLOOR_DOWN3):
-			localOrdersChan <- Order{3, ORDER_DOWN}
+			localOrderChan <- Order{3, ORDER_DOWN}
 		case ReadBit(FLOOR_DOWN4):
-			localOrdersChan <- Order{4, ORDER_DOWN}
+			localOrderChan <- Order{4, ORDER_DOWN}
 		case ReadBit(FLOOR_COMMAND1):
-			localOrdersChan <- Order{1, ORDER_INTERNAL}
+			localOrderChan <- Order{1, ORDER_INTERNAL}
 		case ReadBit(FLOOR_COMMAND2):
-			localOrdersChan <- Order{2, ORDER_INTERNAL}
+			localOrderChan <- Order{2, ORDER_INTERNAL}
 		case ReadBit(FLOOR_COMMAND3):
-			localOrdersChan <- Order{3, ORDER_INTERNAL}
+			localOrderChan <- Order{3, ORDER_INTERNAL}
 		case ReadBit(FLOOR_COMMAND4):
-			localOrdersChan <- Order{4, ORDER_INTERNAL}
+			localOrderChan <- Order{4, ORDER_INTERNAL}
 		}
 	}
 

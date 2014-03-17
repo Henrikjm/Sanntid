@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	ORDERPORT string = "44001"
-	ALIVEPORT string = "44002"
-	COSTPORT string = "44003"
-	ELEVATORPORT string = "44004"
-	ORDERCONFIRMATIONPORT string = "44005"
+	ORDERPORT string = "44021"
+	ALIVEPORT string = "44042"
+	COSTPORT string = "44013"
+	ELEVATORPORT string = "44064"
+	ORDERCONFIRMATIONPORT string = "44075"
 )
 
 

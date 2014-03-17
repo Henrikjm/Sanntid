@@ -47,7 +47,7 @@ func TimedUpdate(timedUpdateChan chan string, interval int){
 
 
 
-func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elevator, updateQueueChan chan Elevator){
+func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Elevator, updateQueueChan chan Elevator){
 	
 	//variables
 	var(
@@ -68,13 +68,15 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 
 	//Function calls
 	IoInit()
+	ClearAllLights()
+	
 	go MotorControl()
-	go GetOrderButton(localOrdersChan)
+	go GetOrderButton(localOrderChan)
 	go SetOrderLights()
 	go ClearOrderLight()
 	go TimedUpdate(timedUpdateQueueChan, queueUpdateInterval)
 	go SetOrderLights()
-	go ClearAllLights()
+	
 	
 
 	//testvariables

@@ -2,9 +2,10 @@ package main
 
 import(
 	"driver"
-	//"network"
+	"network"
 	"queue"
 	."types"
+	"fmt"
 )
 
 
@@ -18,7 +19,7 @@ concerened that queue might overwrite the direction and lastfloor variables, not
 
 //::::::::::::::::::::
 */
-
+fmt.Println(MOVE_UP, MOVE_DOWN, MOVE_STOP)
 exitChan := make(chan string)
 //---NETWORK - QUEUE
 //------- Update
@@ -37,7 +38,7 @@ localIpChan := make(chan string)
 
 //---DRIVER - QUEUE
 // ------- I/O
-localOrdersChan := make(chan Order)
+localOrderChan := make(chan Order,3)
 // ------- Update
 receiveDriverUpdateChan := make(chan Elevator,1)
 updateDriverChan := make(chan Elevator)
@@ -47,7 +48,7 @@ updateDriverChan := make(chan Elevator)
 	
 updateFromAliveChan := make(chan Change)
 recieveCostChan := make(chan map[string]Cost)
-orderChannel := make(chan Order)
+orderChan := make(chan Order)
 costChan := make(chan map[string]Cost)
 
  	
@@ -56,11 +57,11 @@ costChan := make(chan map[string]Cost)
 
 
 
-go driver.ControlHandler(localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
+go driver.ControlHandler(localOrderChan, updateDriverChan, receiveDriverUpdateChan)
 go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderChan, deadOrderChan, sendCostChan, receivedCostsChan, 
-	changedElevatorChan, localIpChan , localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
-go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan , newOrderChan, recieveCostChan, orderChannel, deadOrderChan
- costChan, updateNetworkChan, receiveElevatorChan, updateNetworkChan, receiveElevatorChan)
+	changedElevatorChan, localIpChan , localOrderChan, updateDriverChan, receiveDriverUpdateChan)
+go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan, newOrderChan, recieveCostChan, orderChan, deadOrderChan,
+ costChan, updateNetworkChan, receiveElevatorChan)
 
 <-exitChan
 }
