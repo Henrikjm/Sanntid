@@ -55,7 +55,7 @@ func RecieveAliveUDP(aliveChan chan string){
 }
 
 //OK
-func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
+func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
 	fmt.Println("UpdateAliveUDP Started")
 	go ImAliveUDP()
 	go RecieveAliveUDP(aliveChan)
@@ -71,7 +71,7 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 				}else{
 					aliveMap[incomingIP]=time.Now()
 					fmt.Println("|||||||||||||||||||||||||Forwarding:", incomingIP,"|||||||||||||||||||||||||||||||")
-					updateFromAliveChan <- Change{"new",incomingIP}
+					changedElevatorChan <- Change{"new",incomingIP}
 				}
 			case <-updateForCostChan:
 				updateForCostChan<-aliveMap
@@ -83,7 +83,7 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
 					if time.Now().Sub(value) > 500000000 {
 						delete(aliveMap, ip)
-						updateFromAliveChan <- Change{"dead", ip}
+						changedElevatorChan <- Change{"dead", ip}
 					}
 				}
 				
@@ -107,7 +107,7 @@ func LocalIpSender(localIpChan chan string){
 }
 
 
-func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
+func RecieveOrderFromUDP(newOrderFromUDPChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
 	conn := MakeListenerConn(ORDERPORT)
 	sender := MakeSenderConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
@@ -120,7 +120,7 @@ func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[strin
 		
 		fmt.Println("New order recieved. Waiting for cost evaluations.")
 		for{
-			newOrderChan <- newOrder //videresend ordre til costevaluering
+			newOrderFromUDPChan <- newOrder //videresend ordre til costevaluering
 			if RecieveCost(newOrder , recieveCostChan, updateForCostChan){ //Vent til all cost er mottat og så send dette til kømodul
 				fmt.Println("All cost evaluations recieved. Breaking loop.")
 				break
@@ -131,7 +131,7 @@ func RecieveOrderFromUDP(newOrderChan chan Order, recieveCostChan chan map[strin
 }
 
 
-func SendOrderToUDP(orderChan chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
+func SendOrderToUDP(orderChan chan Order, deadOrderToUDPChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	orderConfirmationChan := make(chan bool, 1)
 	status := 1
@@ -140,7 +140,7 @@ func SendOrderToUDP(orderChan chan Order, deadOrderChan chan Order, costChan cha
 		select{
 			case order = <- orderChan: //Venter på ordre
 
-			case order = <- deadOrderChan:
+			case order = <- deadOrderToUDPChan:
 		}
 		fmt.Println("Sending order. Waiting for RecieveOrderConfirmation.")
 		go RecieveOrderConfirmation(order, orderConfirmationChan, updateForConfirmationChan)
@@ -287,9 +287,9 @@ func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet
 	}	
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, 
-	newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChan chan Order, 
-	deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator,
+func NetworkHandler(localIpChan chan string, changedElevatorChan chan Change, sendCostChan chan Cost, 
+	newOrderFromUDPChan chan Order, recieveCostChan chan map[string]Cost, orderToNetworkChan chan Order, 
+	deadOrderToUDPChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator,
 	 receiveElevatorChan chan Elevator){
 
 
@@ -302,9 +302,9 @@ func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, se
 
 	go SendCost(sendCostChan)
 	go LocalIpSender(localIpChan)
-	go UpdateAliveUDP(aliveChan, updateFromAliveChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
-	go SendOrderToUDP(orderChan, deadOrderChan, costChan, updateForConfirmationChan)
-	go RecieveOrderFromUDP(newOrderChan, recieveCostChan, updateForCostChan)
+	go UpdateAliveUDP(aliveChan, changedElevatorChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
+	go SendOrderToUDP(orderToNetworkChan, deadOrderToUDPChan, costChan, updateForConfirmationChan)
+	go RecieveOrderFromUDP(newOrderFromUDPChan, recieveCostChan, updateForCostChan)
 	
 	go SendElevator(updateNetworkChan)
 	go RecieveElevator(receiveElevatorChan)

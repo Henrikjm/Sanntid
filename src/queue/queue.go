@@ -129,7 +129,7 @@ func GetLocalElevatorIndex(elevators []Elevator, localIp string)int{
 	return -1
 }
 
-func HandleDeadElev(elevators []Elevator, ip string, deadOrderChan chan Order){
+func HandleDeadElev(elevators []Elevator, ip string, deadOrderToUDPChan chan Order){
 	var i int
 	var deadElevQueue []Order
 	for i = 0 ; i < N_ELEVATORS; i++{
@@ -140,7 +140,7 @@ func HandleDeadElev(elevators []Elevator, ip string, deadOrderChan chan Order){
 	}
 	for i = 0; i < len(deadElevQueue); i++{
 		if deadElevQueue[i].Orientation != ORDER_INTERNAL{
-			deadOrderChan <- deadElevQueue[i]
+			deadOrderToUDPChan <- deadElevQueue[i]
 		}
 	}
 }
@@ -175,8 +175,8 @@ func IsNotInElevator(elevator Elevator, order Order) bool {
 
 
 
-func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderChan chan Order, deadOrderChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
-	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator){
+func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, receivedCostsChan chan []Cost, 
+	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order){
 	
 
 		
@@ -229,18 +229,18 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
 			fmt.Println("RecievedLocalOrder")
 			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
-				//if localOrder.Orientation == ORDER_INTERNAL{
+				if localOrder.Orientation == ORDER_INTERNAL{
 					InsertOrder(elevators[localElevatorIndex], localOrder)
 					updateDriverChan <- elevators[localElevatorIndex]
-				//}else{
-				//	sendLocalOrderChan <- localOrder
-				//}
+				}else{
+					orderToNetworkChan <- localOrder
+				}
 			}
 			
 			updateNetworkChan <- elevators[localElevatorIndex]
 		
 
-		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
+		case newOrder = <-newOrderFromUDPChan: //receives new order and replies with sending local Cost
 			fmt.Println("RecievedNewOrder")
 			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
 			sendCostChan <- localCost
@@ -267,7 +267,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1NEW ELEVATOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 					HandleNewElevator(elevators, changedElevator.Ip)
 				}else if changedElevator.Type == "dead"{
-					HandleDeadElev(elevators, changedElevator.Ip, deadOrderChan)
+					HandleDeadElev(elevators, changedElevator.Ip, deadOrderToUDPChan)
 				}
 			}
 
