@@ -70,6 +70,7 @@ func UpdateAliveUDP(aliveChan chan string, updateFromAliveChan chan Change, requ
 					aliveMap[incomingIP] = time.Now()
 				}else{
 					aliveMap[incomingIP]=time.Now()
+					fmt.Println("|||||||||||||||||||||||||Forwarding:", incomingIP,"|||||||||||||||||||||||||||||||")
 					updateFromAliveChan <- Change{"new",incomingIP}
 				}
 			case <-updateForCostChan:

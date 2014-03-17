@@ -158,7 +158,7 @@ func HandleNewElevator(elevators []Elevator, ip string){
 func TimedUpdate(timedUpdateChan chan string){
 	for{
 		timedUpdateChan <- "Update"
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 1000)
 	}
 }
 
@@ -226,6 +226,50 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		// RULING OUT CHANNEL WAITING FOR NOW
 		//-------------------------------------
 		//receiving updates from other modules
+		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
+			fmt.Println("RecievedLocalOrder")
+			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
+				//if localOrder.Orientation == ORDER_INTERNAL{
+					InsertOrder(elevators[localElevatorIndex], localOrder)
+					updateDriverChan <- elevators[localElevatorIndex]
+				//}else{
+				//	sendLocalOrderChan <- localOrder
+				//}
+			}
+			
+			updateNetworkChan <- elevators[localElevatorIndex]
+		
+
+		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
+			fmt.Println("RecievedNewOrder")
+			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
+			sendCostChan <- localCost
+		
+
+		case receivedCosts = <- receivedCostsChan: //receives a map of costs and ip's
+			fmt.Println("RecievedCost")
+			best := Cost{}
+			best.Cost = 20
+			for _, receivedCost =  range receivedCosts{
+				if receivedCost.Cost < best.Cost{
+					best = receivedCost
+				}
+			}
+			if best.Ip == elevators[localElevatorIndex].Ip{
+				InsertOrder(elevators[localElevatorIndex], best.Order)
+				updateNetworkChan <- elevators[localElevatorIndex]
+			}
+		
+		case changedElevator = <- changedElevatorChan:
+			fmt.Println("changedElevator")
+			if localElevatorIndex == 0{
+				if changedElevator.Type == "new"{
+					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1NEW ELEVATOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+					HandleNewElevator(elevators, changedElevator.Ip)
+				}else if changedElevator.Type == "dead"{
+					HandleDeadElev(elevators, changedElevator.Ip, deadOrderChan)
+				}
+			}
 
 		case updateElevator = <- receiveDriverUpdateChan:
 			fmt.Println("RecievedDriverUpdate")
@@ -248,44 +292,8 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		case <- timedUpdateChanDriver:
 			fmt.Println("TimedUpdateChanDriver")
 			updateDriverChan <- elevators[localElevatorIndex]
-		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
-			fmt.Println("RecievedLocalOrder")
-			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
-				//if localOrder.Orientation == ORDER_INTERNAL{
-					InsertOrder(elevators[localElevatorIndex], localOrder)
-					updateDriverChan <- elevators[localElevatorIndex]
-				//}else{
-				//	sendLocalOrderChan <- localOrder
-				//}
-			}
-			
-			updateNetworkChan <- elevators[localElevatorIndex]
-		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
-			fmt.Println("RecievedNewOrder")
-			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
-			sendCostChan <- localCost
-		case receivedCosts = <- receivedCostsChan: //receives a map of costs and ip's
-			fmt.Println("RecievedCost")
-			best := Cost{}
-			best.Cost = 20
-			for _, receivedCost =  range receivedCosts{
-				if receivedCost.Cost < best.Cost{
-					best = receivedCost
-				}
-			}
-			if best.Ip == elevators[localElevatorIndex].Ip{
-				InsertOrder(elevators[localElevatorIndex], best.Order)
-				updateNetworkChan <- elevators[localElevatorIndex]
-			}
-		case changedElevator = <- changedElevatorChan:
-			fmt.Println("changedElevator")
-			if localElevatorIndex == 0{
-				if changedElevator.Type == "new"{
-					HandleNewElevator(elevators, changedElevator.Ip)
-				}else if changedElevator.Type == "dead"{
-					HandleDeadElev(elevators, changedElevator.Ip, deadOrderChan)
-				}
-			}
+		
+		
 		
 		}
 	}

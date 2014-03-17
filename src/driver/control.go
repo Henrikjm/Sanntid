@@ -47,8 +47,8 @@ func TimedUpdate(timedUpdateChan chan string, interval int){
 
 
 
-func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Elevator, updateQueueChan chan Elevator){
-	
+func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, updateQueueChan chan Elevator){
+	fmt.Println("ControlHandler started.")
 	//variables
 	var(
 		elevator Elevator
@@ -57,7 +57,8 @@ func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Eleva
 		dummyElev Elevator
 		waitTime time.Time
 	)
-	queueUpdateInterval := 200
+
+	queueUpdateInterval := 400
 
 	//channels
 	motorChannel = make(chan MoveDir)
@@ -68,8 +69,7 @@ func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Eleva
 
 	//Function calls
 	IoInit()
-	ClearAllLights()
-	
+	go ClearAllLights()
 	go MotorControl()
 	go GetOrderButton(localOrderChan)
 	go SetOrderLights()
@@ -82,7 +82,7 @@ func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Eleva
 	//testvariables
 	//OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
 	fmt.Println("yo")
-	dummyElev = <-receiveQueueUpdateChan
+	dummyElev = <-updateDriverChan
 	elevator.OrderQueue = dummyElev.OrderQueue
 	state = "start"
 	
@@ -94,7 +94,7 @@ func ControlHandler(localOrderChan chan Order, receiveQueueUpdateChan chan Eleva
 				updateQueueChan <- elevator
 			//}(elevator)
 		
-		case dummyElev = <- receiveQueueUpdateChan:
+		case dummyElev = <- updateDriverChan:
 			elevator.OrderQueue = dummyElev.OrderQueue
 			setOrderLightChannel <- elevator.OrderQueue
 		
