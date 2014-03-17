@@ -58,7 +58,7 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 		waitTime time.Time
 	)
 
-	queueUpdateInterval := 400
+	queueUpdateInterval := 50
 
 	//channels
 	motorChannel = make(chan MoveDir)
@@ -81,7 +81,7 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 
 	//testvariables
 	//OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
-	fmt.Println("yo")
+	
 	dummyElev = <-updateDriverChan
 	elevator.OrderQueue = dummyElev.OrderQueue
 	state = "start"
@@ -89,18 +89,23 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 	
 	for{
 		select{
+
 		case <- timedUpdateQueueChan:
+			
 			//go func(elevator Elevator){ //litt dirty men går jo veldig bra
-				updateQueueChan <- elevator
+			updateQueueChan <- elevator
 			//}(elevator)
 		
 		case dummyElev = <- updateDriverChan:
+			
 			elevator.OrderQueue = dummyElev.OrderQueue
 			setOrderLightChannel <- elevator.OrderQueue
 		
 		default: //STATE MACHINE!
+			
 				switch state{
 			case "start":
+				
 				elevator.Direction = MOVE_STOP
 				elevator.LastFloor = 0
 				reachedFloor = ReadFloor()
@@ -108,6 +113,8 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 					motorChannel <- MOVE_UP
 				}
 				for{
+					time.Sleep(time.Millisecond*1)
+					fmt.Println("Searching for floor.")
 					reachedFloor = ReadFloor()
 					if  reachedFloor > 0{
 					motorChannel <- MOVE_STOP
@@ -119,6 +126,7 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 				state = "idle"
 				fmt.Println(state)
 			case "moving":
+				
 				reachedFloor = ReadFloor()
 				/*if ReadBit(STOP) {
 					motorChannel <- MOVE_STOP 
@@ -130,6 +138,7 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 					state = "floor"
 				}
 			case "floor":
+				
 				if elevator.LastFloor == elevator.OrderQueue[0].Floor{
 					motorChannel <- MOVE_STOP
 					elevator.Direction = MOVE_STOP
@@ -141,10 +150,12 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, u
 				}
 				SetFloorIndicatorLight(reachedFloor)
 			case "arrived":
+				
 		        if time.Now().After(waitTime){
 					state = "idle"
 		        }
 			case "idle":
+				
 				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_INTERNAL}
 				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_UP}
 				clearOrderLightChannel <- Order{elevator.LastFloor,ORDER_DOWN}

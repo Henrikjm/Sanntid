@@ -31,7 +31,7 @@ deadOrderToUDPChan := make(chan Order)
 orderToNetworkChan := make(chan Order)
 //-------- Costs
 sendCostChan := make(chan Cost, 2)
-receivedCostsChan := make(chan []Cost)
+recieveCostChan := make(chan map[string]Cost)
 //-------- Change
 changedElevatorChan := make(chan Change)
 //-------- Get
@@ -48,7 +48,7 @@ updateDriverChan := make(chan Elevator)
 
 	
 
-recieveCostChan := make(chan map[string]Cost)
+
 costChan := make(chan map[string]Cost)
 
  	
@@ -58,8 +58,9 @@ costChan := make(chan map[string]Cost)
 
 
 go driver.ControlHandler(localOrderChan, updateDriverChan, receiveDriverUpdateChan)
-go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderFromUDPChan, deadOrderToUDPChan, sendCostChan, receivedCostsChan, 
+go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderFromUDPChan, deadOrderToUDPChan, sendCostChan, recieveCostChan, 
 	changedElevatorChan, localIpChan , localOrderChan, updateDriverChan, receiveDriverUpdateChan, orderToNetworkChan)
+
 go network.NetworkHandler(localIpChan, changedElevatorChan, sendCostChan, newOrderFromUDPChan, recieveCostChan, orderToNetworkChan, deadOrderToUDPChan,
  costChan, updateNetworkChan, receiveElevatorChan)
 

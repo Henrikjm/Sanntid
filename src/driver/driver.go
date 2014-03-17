@@ -116,7 +116,7 @@ func GetObstruction() { ReadBit(OBSTRUCTION) }
 
 func GetOrderButton(localOrderChan chan Order){
 	for{
-		time.Sleep(time.Millisecond*1)
+		time.Sleep(time.Millisecond*100)
 		switch{
 		case ReadBit(FLOOR_UP1):
 			localOrderChan <- Order{1,ORDER_UP}
@@ -147,6 +147,7 @@ func GetOrderButton(localOrderChan chan Order){
 }
 
 func ReadFloor()int{
+	time.Sleep(time.Millisecond * 1)
 	switch{
 	case ReadBit(SENSOR1):
 		return 1
@@ -169,12 +170,12 @@ func MotorControl() {
 		newDir = <-motorChannel
 		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
 			SetBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 20)
+			time.Sleep(time.Millisecond * 40)
 			WriteAnalog(MOTOR, MINSPEED)
 			
 		} else if (newDir == MOVE_STOP) && (currentDir == MOVE_DOWN) {
 			ClearBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 20)
+			time.Sleep(time.Millisecond * 40)
 			WriteAnalog(MOTOR, MINSPEED)
 			
 		} else if newDir == MOVE_UP {
