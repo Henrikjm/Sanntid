@@ -5,7 +5,7 @@ import(
 	"network"
 	"queue"
 	."types"
-	//"fmt"
+	"fmt"
 )
 
 
@@ -19,7 +19,7 @@ concerened that queue might overwrite the direction and lastfloor variables, not
 
 //::::::::::::::::::::
 */
-
+fmt.Println(MOVE_UP, MOVE_DOWN, MOVE_STOP)
 exitChan := make(chan string)
 //---NETWORK - QUEUE
 //------- Update

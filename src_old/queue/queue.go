@@ -139,7 +139,7 @@ func HandleDeadElev(elevators []Elevator, ip string, deadOrderToUDPChan chan Ord
 		}
 	}
 	for i = 0; i < len(deadElevQueue); i++{
-		if deadElevQueue[i].Orientation != ORDER_INTERNAL && deadElevQueue[i].Orientation != 0{
+		if deadElevQueue[i].Orientation != ORDER_INTERNAL{
 			deadOrderToUDPChan <- deadElevQueue[i]
 		}
 	}
@@ -237,7 +237,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 			
-			//updateNetworkChan <- elevators[localElevatorIndex]
+			updateNetworkChan <- elevators[localElevatorIndex]
 		
 
 		case newOrder = <-newOrderFromUDPChan: //receives new order and replies with sending local Cost
@@ -267,13 +267,12 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1NEW ELEVATOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 					HandleNewElevator(elevators, changedElevator.Ip)
 				}else if changedElevator.Type == "dead"{
-					fmt.Println("!!!!!!!DEEEEEEEEEEEEEEEEEAD!!!!!!!!!!!!!!!!!!!!")
 					HandleDeadElev(elevators, changedElevator.Ip, deadOrderToUDPChan)
 				}
 			}
 
 		case updateElevator = <- receiveDriverUpdateChan:
-			//fmt.Println("RecievedDriverUpdate")
+			fmt.Println("RecievedDriverUpdate")
 			elevators[localElevatorIndex].Direction = updateElevator.Direction
 			elevators[localElevatorIndex].LastFloor = updateElevator.LastFloor
 		
@@ -287,11 +286,11 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 			}
 		//Updating the other module
 		case <- timedUpdateChanNetwork: // Timed update to network
-			//fmt.Println("TimedUpdate")
+			fmt.Println("TimedUpdate")
 			updateNetworkChan <- elevators[localElevatorIndex]
 		
 		case <- timedUpdateChanDriver:
-			//fmt.Println("TimedUpdateChanDriver")
+			fmt.Println("TimedUpdateChanDriver")
 			updateDriverChan <- elevators[localElevatorIndex]
 		
 		

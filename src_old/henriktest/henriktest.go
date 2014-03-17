@@ -2,26 +2,30 @@ package main
 
 //import "net"
 import "fmt"
-//import "strings"
+import "strings"
 //import "driver"
 //import "time"
-import "encoding/json"
-//import "network"
-import ."types"
+//import "encoding/json"
+import "network"
+//import ."types"
 
 
 
 
 func main(){
 
-	data := Order{1,2}
-	orderB,_ := json.Marshal(data)
-	var newOrder Order
-	json.Unmarshal(orderB, &newOrder)
-	fmt.Println(newOrder, orderB)
-	lol  :="kekke    kekeke"
-	dataString,_ := json.Marshal(lol)
-	fmt.Println(dataString)
+	go network.ImAliveUDP()
+
+	data := make([]byte, 1024)
+	conn := network.MakeListenerConn(network.ALIVEPORT)
+	for {		
+		_, addr, err := conn.ReadFromUDP(data)
+		network.CheckError(err, "ERROR ReadFromUDP")
+		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":") //Fjerner PORT og semikolon
+
+		fmt.Println(ip)
+		
+	}
 
 }
 /*
