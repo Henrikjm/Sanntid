@@ -81,12 +81,14 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 			case <-updateForConfirmationChan:
 				updateForConfirmationChan <- aliveMap
 			default:
+				time.Sleep(time.Millisecond * 10)
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
 					if time.Now().Sub(value) > 500000000 {
 						delete(aliveMap, ip)
 						fmt.Println("DELETING ELEVATOR!!!!!!!!!!!")
 						changedElevatorChan <- Change{"dead", ip}
 					}
+					
 				}
 				
 		}
@@ -165,6 +167,7 @@ func SendOrderToUDP(orderChan chan Order, deadOrderToUDPChan chan Order, costCha
 			if status == 1{
 				fmt.Println("ERROR!! SendOrder failed.")
 			}
+			time.Sleep(time.Millisecond * 5)
 		}
 }
 
@@ -198,7 +201,7 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 	fmt.Println("Listening for cost updates.")
 	for {
 
-		conn.SetReadDeadline(time.Now().Add(time.Duration(10) * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(time.Duration(50) * time.Millisecond))
 		_,_,err := conn.ReadFromUDP(data)
 
 		if (err != nil) && (err.Error() != ("read udp4 0.0.0.0:"+ COSTPORT +": i/o timeout")) {
@@ -306,7 +309,7 @@ func NetworkHandler(localIpChan chan string, changedElevatorChan chan Change, se
 
 
 	fmt.Println("NetworkHandler Started...")
-
+	exitChan :=make(chan string)
 	aliveChan := make(chan string)
 	requestAliveChan := make(chan map[string]time.Time)
 	updateForConfirmationChan := make(chan map[string]time.Time)
@@ -321,7 +324,7 @@ func NetworkHandler(localIpChan chan string, changedElevatorChan chan Change, se
 	go SendElevator(updateNetworkChan)
 	go RecieveElevator(receiveElevatorChan)
 
-	for{time.Sleep(time.Millisecond * 200)
-	}
+	
+	<- exitChan
 	 
 }

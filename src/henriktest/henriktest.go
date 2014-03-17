@@ -1,12 +1,12 @@
 package main
 
 //import "net"
-import "fmt"
+//import "fmt"
 //import "strings"
 //import "driver"
 //import "time"
-import "encoding/json"
-//import "network"
+//import "encoding/json"
+import "network"
 import ."types"
 
 
@@ -14,14 +14,40 @@ import ."types"
 
 func main(){
 
-	data := Order{1,2}
-	orderB,_ := json.Marshal(data)
-	var newOrder Order
-	json.Unmarshal(orderB, &newOrder)
-	fmt.Println(newOrder, orderB)
-	lol  :="kekke    kekeke"
-	dataString,_ := json.Marshal(lol)
-	fmt.Println(dataString)
+
+
+	exitChan := make(chan string)
+	//---NETWORK - QUEUE
+	//------- Update
+	receiveElevatorChan := make(chan Elevator)
+	updateNetworkChan := make(chan Elevator)
+	//-------- Orders
+	newOrderFromUDPChan := make(chan Order)
+	deadOrderToUDPChan := make(chan Order)
+	orderToNetworkChan := make(chan Order)
+	//-------- Costs
+	sendCostChan := make(chan Cost, 2)
+	//receivedCostsChan := make(chan []Cost)
+	//-------- Change
+	changedElevatorChan := make(chan Change)
+	//-------- Get
+	localIpChan := make(chan string)
+
+	//---DRIVER - QUEUE
+	// ------- I/O
+	//localOrderChan := make(chan Order,3)
+	// ------- Update
+	//receiveDriverUpdateChan := make(chan Elevator,1)
+	//updateDriverChan := make(chan Elevator)		
+
+	recieveCostChan := make(chan map[string]Cost)
+	costChan := make(chan map[string]Cost)
+
+ 	go network.NetworkHandler(localIpChan, changedElevatorChan, sendCostChan, newOrderFromUDPChan, recieveCostChan, orderToNetworkChan, deadOrderToUDPChan,
+ costChan, updateNetworkChan, receiveElevatorChan)
+ 	
+
+<-exitChan
 
 }
 /*
