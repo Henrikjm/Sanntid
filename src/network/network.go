@@ -34,7 +34,7 @@ func ImAliveUDP() {
 	CheckError(err, "ERROR while dialing")
 	msg := "ImAlive!"
 	for {
-		
+		time.Sleep(time.Millisecond*200)
 		conn.Write([]byte(msg))
 	}
 }

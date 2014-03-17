@@ -2,24 +2,31 @@ package main
 
 //import "net"
 import "fmt"
-import "driver"
+import "strings"
+//import "driver"
 //import "time"
 //import "encoding/json"
-//import "network"
-import ."types"
+import "network"
+//import ."types"
 
 
 
 
 func main(){
 
-	driver.IoInit()
+	go network.ImAliveUDP()
 
-	localOrderChan := make( chan Order)
-	go driver.GetOrderButton(localOrderChan)
-	for{
-		fmt.Println(driver.ReadBit(driver.FLOOR_UP1))
+	data := make([]byte, 1024)
+	conn := network.MakeListenerConn(network.ALIVEPORT)
+	for {		
+		_, addr, err := conn.ReadFromUDP(data)
+		network.CheckError(err, "ERROR ReadFromUDP")
+		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":") //Fjerner PORT og semikolon
+
+		fmt.Println(ip)
+		
 	}
+
 }
 /*
 	aliveChan := make(chan string)
