@@ -91,9 +91,11 @@ func ControlHandler(localOrdersChan chan Order, receiveQueueUpdateChan chan Elev
 			//go func(elevator Elevator){ //litt dirty men går jo veldig bra
 				updateQueueChan <- elevator
 			//}(elevator)
+		
 		case dummyElev = <- receiveQueueUpdateChan:
 			elevator.OrderQueue = dummyElev.OrderQueue
 			setOrderLightChannel <- elevator.OrderQueue
+		
 		default: //STATE MACHINE!
 				switch state{
 			case "start":

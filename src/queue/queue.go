@@ -192,7 +192,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	var localOrder Order
 
 
-	/*
+	
 	//Variables
 	var newOrder, localOrder Order
 	var localCost, receivedCost Cost
@@ -215,7 +215,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	elevators[localElevatorIndex] = updateElevator
 
 	go TimedUpdate(timedUpdateChanNetwork)
-	*/
+	
 	go TimedUpdate(timedUpdateChanDriver)
 
 	//Listening and handling
@@ -229,7 +229,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		case updateElevator = <- receiveDriverUpdateChan:
 			elevators[localElevatorIndex].Direction = updateElevator.Direction
 			elevators[localElevatorIndex].LastFloor = updateElevator.LastFloor
-		/*
+		
 		case updateElevator = <- receiveElevatorChan: // Recieves updates from all-over, updates accordingly
 			for i := 0; i < N_ELEVATORS; i++{
 				if elevators[i].Ip == updateElevator.Ip{
@@ -240,7 +240,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		//Updating the other module
 		case <- timedUpdateChanNetwork: // Timed update to network
 			updateNetworkChan <- elevators[localElevatorIndex]
-		*/
+		
 		case <- timedUpdateChanDriver:
 			updateDriverChan <- elevators[localElevatorIndex]
 		case localOrder = <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
@@ -252,7 +252,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				//	sendLocalOrdersChan <- localOrder
 				//}
 			}
-			/*
+			
 			updateNetworkChan <- elevators[localElevatorIndex]
 		case newOrder = <-newOrderChan: //receives new order and replies with sending local Cost
 			localCost = Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder), newOrder, elevators[localElevatorIndex].Ip}
@@ -277,7 +277,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					HandleDeadElev(elevators, changedElevator.Ip, sendLocalOrdersChan)
 				}
 			}
-		*/
+		
 		}
 	}
 }

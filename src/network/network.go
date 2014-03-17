@@ -286,7 +286,11 @@ func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet
 	}	
 }
 
-func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChan chan Order, deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator, receiveElevatorChan chan Elevator){
+func NetworkHandler(localIpChan chan string, updateFromAliveChan chan Change, sendCostChan chan Cost, 
+	newOrderChan chan Order, recieveCostChan chan map[string]Cost, orderChan chan Order, 
+	deadOrderChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator,
+	 receiveElevatorChan chan Elevator){
+
 
 	fmt.Println("NetworkHandler Started...")
 

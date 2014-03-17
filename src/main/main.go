@@ -60,7 +60,7 @@ go driver.ControlHandler(localOrdersChan, updateDriverChan, receiveDriverUpdateC
 go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderChan, deadOrderChan, sendCostChan, receivedCostsChan, 
 	changedElevatorChan, localIpChan , localOrdersChan, updateDriverChan, receiveDriverUpdateChan)
 go network.NetworkHandler(localIpChan, updateFromAliveChan, sendCostChan , newOrderChan, recieveCostChan, orderChannel, deadOrderChan
- costChan, updateNetworkChan, receiveElevatorChan)
+ costChan, updateNetworkChan, receiveElevatorChan, updateNetworkChan, receiveElevatorChan)
 
 <-exitChan
 }
