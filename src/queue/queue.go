@@ -262,11 +262,11 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 
 			//dummyIpStr:= strings.Trim(strings.SplitAfter(elevators[localElevatorIndex].Ip, "187")[1], ".")
 			highestIp := 0//strconv.Atoi(dummyIpStr)
-			
+			newIp := 0
 			for _,recievedCost = range receivedCostMap{
 				if recievedCost.Cost == best.Cost{
 					dummyIpStr := strings.Trim(strings.SplitAfter(recievedCost.Ip, "187")[1], ".")
-					newIp, _ := strconv.Atoi(dummyIpStr)
+					newIp, _ = strconv.Atoi(dummyIpStr)
 					fmt.Println(newIp, highestIp)
 					if newIp > highestIp{
 						highestIp = newIp
