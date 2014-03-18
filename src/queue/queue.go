@@ -4,6 +4,8 @@ import(
 	"fmt"
 	"time"
 	."types"
+	"strings"
+	"strconv"
 )
 
 func GetElevatorCost(elevator Elevator, order Order) int {
@@ -59,7 +61,7 @@ func GetInsertOrderPlacement(elevator Elevator, order Order) int{
 			}
 		}
 	}
-	return -1
+	return MAX_ORDERS-1
 }
 
 func GetInsertOrderPriority(elevator Elevator, order Order) int{
@@ -257,7 +259,23 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					best = recievedCost
 				}
 			}
-			if best.Ip == elevators[localElevatorIndex].Ip{
+
+			//dummyIpStr:= strings.Trim(strings.SplitAfter(elevators[localElevatorIndex].Ip, "187")[1], ".")
+			highestIp := 0//strconv.Atoi(dummyIpStr)
+			
+			for _,recievedCost = range receivedCostMap{
+				if recievedCost.Cost == best.Cost{
+					dummyIpStr := strings.Trim(strings.SplitAfter(recievedCost.Ip, "187")[1], ".")
+					newIp, _ := strconv.Atoi(dummyIpStr)
+					fmt.Println(newIp, highestIp)
+					if newIp > highestIp{
+						highestIp = newIp
+						best = recievedCost
+					}
+				}
+			}
+			fmt.Println("The best IP is: ", best.Ip)
+			if best.Ip == elevators[localElevatorIndex].Ip{ //Map er ikke sortert, så heiser velger forskjellig og tar samme ordre
 				InsertOrder(elevators[localElevatorIndex], best.Order)
 				updateNetworkChan <- elevators[localElevatorIndex]
 			}

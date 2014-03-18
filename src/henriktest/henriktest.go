@@ -1,54 +1,25 @@
 package main
 
 //import "net"
-//import "fmt"
-//import "strings"
+import "fmt"
+import "strings"
+import "strconv"
 //import "driver"
 //import "time"
 //import "encoding/json"
-import "network"
-import ."types"
+//import "network"
+//import ."types"
 
 
 
 
 func main(){
 
+ 	streng := "129.241.187.144"
 
-
-	exitChan := make(chan string)
-	//---NETWORK - QUEUE
-	//------- Update
-	receiveElevatorChan := make(chan Elevator)
-	updateNetworkChan := make(chan Elevator)
-	//-------- Orders
-	newOrderFromUDPChan := make(chan Order)
-	deadOrderToUDPChan := make(chan Order)
-	orderToNetworkChan := make(chan Order)
-	//-------- Costs
-	sendCostChan := make(chan Cost, 2)
-	//receivedCostsChan := make(chan []Cost)
-	//-------- Change
-	changedElevatorChan := make(chan Change)
-	//-------- Get
-	localIpChan := make(chan string)
-
-	//---DRIVER - QUEUE
-	// ------- I/O
-	//localOrderChan := make(chan Order,3)
-	// ------- Update
-	//receiveDriverUpdateChan := make(chan Elevator,1)
-	//updateDriverChan := make(chan Elevator)		
-
-	recieveCostChan := make(chan map[string]Cost)
-	costChan := make(chan map[string]Cost)
-
- 	go network.NetworkHandler(localIpChan, changedElevatorChan, sendCostChan, newOrderFromUDPChan, recieveCostChan, orderToNetworkChan, deadOrderToUDPChan,
- costChan, updateNetworkChan, receiveElevatorChan)
- 	
-
-<-exitChan
-
+	ip := strings.Trim(strings.SplitAfter(streng, "187")[1], ".")
+	i, _ := strconv.Atoi(ip)
+	fmt.Println(ip, i*2)
 }
 /*
 	aliveChan := make(chan string)

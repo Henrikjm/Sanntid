@@ -3,7 +3,6 @@ package driver
 import (
 	"time"
 	."types"
-
 )
 
 
@@ -169,25 +168,34 @@ func MotorControl() {
 	for {
 		newDir = <-motorChannel
 		if (newDir == MOVE_STOP) && (currentDir == MOVE_UP) {
+			WriteAnalog(MOTOR, 1000)
 			SetBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 40)
+			time.Sleep(time.Millisecond * 30)
+			ClearBit(MOTORDIR)
 			WriteAnalog(MOTOR, MINSPEED)
+			currentDir = newDir
 			
 		} else if (newDir == MOVE_STOP) && (currentDir == MOVE_DOWN) {
+			WriteAnalog(MOTOR, 1000)
 			ClearBit(MOTORDIR)
-			time.Sleep(time.Millisecond * 40)
+			time.Sleep(time.Millisecond * 30)
+			SetBit(MOTORDIR)
 			WriteAnalog(MOTOR, MINSPEED)
+			currentDir = newDir
 			
 		} else if newDir == MOVE_UP {
 			ClearBit(MOTORDIR)
 			WriteAnalog(MOTOR, MAXSPEED)
+			currentDir = newDir
 			
 		} else if newDir == MOVE_DOWN {
 			SetBit(MOTORDIR)
 			WriteAnalog(MOTOR, MAXSPEED)
+			currentDir = newDir
 			
 		} else {
 			WriteAnalog(MOTOR, MINSPEED)
+			currentDir = newDir
 		}
 	}
 }

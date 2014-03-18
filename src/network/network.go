@@ -74,7 +74,6 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 					aliveMap[incomingIP] = time.Now()
 				}else{
 					aliveMap[incomingIP]=time.Now()
-					fmt.Println("|||||||||||||||||||||||||Forwarding:", incomingIP,"|||||||||||||||||||||||||||||||")
 					changedElevatorChan <- Change{"new",incomingIP}
 				}
 			case <-updateForCostChan:
@@ -88,7 +87,7 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
 					if time.Now().Sub(value) > 1000000000 {
 						delete(aliveMap, ip)
-						fmt.Println("DELETING ELEVATOR!!!!!!!!!!!")
+						fmt.Println("!!DELETING ELEVATOR!!")
 						changedElevatorChan <- Change{"dead", ip}
 					}
 					
