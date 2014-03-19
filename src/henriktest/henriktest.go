@@ -2,8 +2,8 @@ package main
 
 //import "net"
 import "fmt"
-import "strings"
-import "strconv"
+//import "strings"
+//import "strconv"
 //import "driver"
 //import "time"
 //import "encoding/json"
@@ -15,11 +15,8 @@ import "strconv"
 
 func main(){
 
- 	streng := "129.241.187.144"
-
-	ip := strings.Trim(strings.SplitAfter(streng, "187")[1], ".")
-	i, _ := strconv.Atoi(ip)
-	fmt.Println(ip, i*2)
+	var lightArray [2][3]int
+	fmt.Println(lightArray)
 }
 /*
 	aliveChan := make(chan string)

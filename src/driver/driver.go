@@ -17,7 +17,7 @@ func ClearOrderLight(){
 	for{
 		order := <- clearOrderLightChannel
 		//fmt.Println(order)
-		switch {
+		switch {/*
 		case order.Floor == 1 && order.Orientation == ORDER_UP:
 			ClearBit(LIGHT_UP1)
 		case order.Floor == 2 && order.Orientation == ORDER_UP:
@@ -29,7 +29,7 @@ func ClearOrderLight(){
 		case order.Floor == 3 && order.Orientation == ORDER_DOWN:
 			ClearBit(LIGHT_DOWN3)
 		case order.Floor == 4 && order.Orientation == ORDER_DOWN:
-			ClearBit(LIGHT_DOWN4)
+			ClearBit(LIGHT_DOWN4)*/
 		case order.Floor == 1 && order.Orientation == ORDER_INTERNAL:
 			ClearBit(LIGHT_COMMAND1)
 		case order.Floor == 2 && order.Orientation == ORDER_INTERNAL:
@@ -62,7 +62,7 @@ func SetOrderLights(){
 	for{
 		orders := <- setOrderLightChannel
 		for i:= 0; i < MAX_ORDERS; i++{
-			switch {
+			switch {/*
 			case orders[i].Floor == 1 && orders[i].Orientation == ORDER_UP:
 				SetBit(LIGHT_UP1)
 			case orders[i].Floor == 2 && orders[i].Orientation== ORDER_UP:
@@ -74,7 +74,7 @@ func SetOrderLights(){
 			case orders[i].Floor == 3 && orders[i].Orientation == ORDER_DOWN:
 				SetBit(LIGHT_DOWN3)
 			case orders[i].Floor == 4 && orders[i].Orientation == ORDER_DOWN:
-				SetBit(LIGHT_DOWN4)
+				SetBit(LIGHT_DOWN4)*/
 			case orders[i].Floor == 1 && orders[i].Orientation == ORDER_INTERNAL:
 				SetBit(LIGHT_COMMAND1)
 			case orders[i].Floor == 2 && orders[i].Orientation == ORDER_INTERNAL:
@@ -115,7 +115,7 @@ func GetObstruction() { ReadBit(OBSTRUCTION) }
 
 func GetOrderButton(localOrderChan chan Order){
 	for{
-		time.Sleep(time.Millisecond*100)
+		time.Sleep(time.Millisecond*30)
 		switch{
 		case ReadBit(FLOOR_UP1):
 			localOrderChan <- Order{1,ORDER_UP}
@@ -146,7 +146,7 @@ func GetOrderButton(localOrderChan chan Order){
 }
 
 func ReadFloor()int{
-	time.Sleep(time.Millisecond * 1)
+	time.Sleep(time.Millisecond * 10)
 	switch{
 	case ReadBit(SENSOR1):
 		return 1
