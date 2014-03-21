@@ -13,9 +13,9 @@ func ClearAllLights() {
 }
 func ClearDoorOpenLight() { ClearBit(DOOR_OPEN) }
 func ClearStopLight()     { ClearBit(LIGHT_STOP) }
-func ClearOrderLight(){
-	for{
-		order := <- clearOrderLightChannel
+func ClearOrderLight(order Order){
+	
+		
 		//fmt.Println(order)
 		switch {/*
 		case order.Floor == 1 && order.Orientation == ORDER_UP:
@@ -39,23 +39,19 @@ func ClearOrderLight(){
 		case order.Floor == 4 && order.Orientation == ORDER_INTERNAL:
 			ClearBit(LIGHT_COMMAND4)
 		}
-	
-	}
 }
-
 func ClearAllOrderLights() {
-	clearOrderLightChannel <- Order{1, ORDER_UP}
-	clearOrderLightChannel <- Order{2, ORDER_UP}
-	clearOrderLightChannel <- Order{3, ORDER_UP}
-	clearOrderLightChannel <- Order{2, ORDER_DOWN}
-	clearOrderLightChannel <- Order{3, ORDER_DOWN}
-	clearOrderLightChannel <- Order{4, ORDER_DOWN}
-	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
-	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
-	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
-	clearOrderLightChannel <- Order{1, ORDER_INTERNAL}
+	ClearBit(LIGHT_UP1)
+	ClearBit(LIGHT_UP2)
+	ClearBit(LIGHT_UP3)
+	ClearBit(LIGHT_DOWN2)
+	ClearBit(LIGHT_DOWN3)
+	ClearBit(LIGHT_DOWN4)
+	ClearBit(LIGHT_COMMAND1)
+	ClearBit(LIGHT_COMMAND2)
+	ClearBit(LIGHT_COMMAND3)
+	ClearBit(LIGHT_COMMAND4)
 }
-
 func SetDoorOpenLight() { SetBit(DOOR_OPEN) }
 func SetStopLight()     { SetBit(LIGHT_STOP) }
 func SetOrderLights(){
@@ -87,7 +83,6 @@ func SetOrderLights(){
 		}
 	}
 }
-
 func SetFloorIndicatorLight(floor int) {
 	switch floor {
 	case 1:
@@ -104,7 +99,6 @@ func SetFloorIndicatorLight(floor int) {
 		SetBit(FLOOR_IND2)
 	}
 }
-
 //READS
 func GetStopButton(){
 	for{
@@ -112,7 +106,6 @@ func GetStopButton(){
 	}
 }
 func GetObstruction() { ReadBit(OBSTRUCTION) }
-
 func GetOrderButton(localOrderChan chan Order){
 	for{
 		time.Sleep(time.Millisecond*30)
@@ -139,14 +132,9 @@ func GetOrderButton(localOrderChan chan Order){
 			localOrderChan <- Order{4, ORDER_INTERNAL}
 		}
 	}
-
-
-
-
 }
-
 func ReadFloor()int{
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 5)
 	switch{
 	case ReadBit(SENSOR1):
 		return 1
@@ -159,9 +147,6 @@ func ReadFloor()int{
 	}
 	return 0
 }
-
-
-
 func MotorControl() {
 	currentDir := MOVE_STOP
 	WriteAnalog(MOTOR, MINSPEED)
@@ -207,6 +192,5 @@ var newDir MoveDir
 var motorChannel chan MoveDir
 var readFloorChannel chan int
 var setOrderLightChannel chan []Order
-var clearOrderLightChannel chan Order
 var stopButtonChannel chan bool
 

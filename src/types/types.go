@@ -10,8 +10,8 @@ type(
 const(
 	N_BUTTONS int = 3
 	N_FLOORS  int = 4
-	MAX_ORDERS int = 10
-	N_ELEVATORS int = 2 //Bør være dynamisk!?
+	MAX_ORDERS int = 30
+	N_ELEVATORS int = 3 //Bør være dynamisk!?
 
 
 	MAXSPEED int = 3048

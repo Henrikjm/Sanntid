@@ -15,8 +15,19 @@ import "fmt"
 
 func main(){
 
-	var lightArray [2][3]int
-	fmt.Println(lightArray)
+	var result []int
+	var test []int
+	test = append(test, 1,2,3,1,2,3,12,123,4,2)
+	fmt.Println(test)
+
+	reference := 1
+
+	for _, v := range test {
+       if v != reference {
+         result = append(result, v)
+       }
+    }
+    fmt.Println(result)
 }
 /*
 	aliveChan := make(chan string)
