@@ -1,33 +1,64 @@
 package main
 
 //import "net"
-import "fmt"
+
 //import "strings"
 //import "strconv"
 //import "driver"
 //import "time"
-//import "encoding/json"
 //import "network"
 //import ."types"
 
+import (
+   // "bufio"
+    "fmt"
+    //"io"
+    "encoding/json"
+    "io/ioutil"
+    //"os"
+)
 
+func check(e error) {
+    if e != nil {
+        panic(e)
+	   
+    }
+}
 
+func checkForInternalOrders() []int{
+	dat, err := ioutil.ReadFile("internalOrderBackupFile")
+	
+	var readOrders []int
+
+	if err != nil {
+		internalOrders := []int{0,0,0,0}
+		d1,_ := json.Marshal(internalOrders)
+	    err := ioutil.WriteFile("internalOrderBackupFile", d1, 0644)
+	    fmt.Println("No internal orders stored. Writing to new file...")
+	    check(err)
+
+	    dat, err := ioutil.ReadFile("internalOrderBackupFile")
+	  
+		err = json.Unmarshal(dat, &readOrders)
+	    fmt.Println("Made new file with empty orders: ", readOrders)
+	}else{
+		
+		err = json.Unmarshal(dat, &readOrders)
+		fmt.Println("Found file for internal orders. The orders were: ", readOrders)
+	}
+	if len(readOrders) != 4 {
+		fmt.Println("CORRUPTED READ!!! Parsing empty order list to elevator.")
+		return []int{0,0,0,0}
+	}
+
+	return readOrders
+}
 
 func main(){
 
-	var result []int
-	var test []int
-	test = append(test, 1,2,3,1,2,3,12,123,4,2)
-	fmt.Println(test)
+	internal := checkForInternalOrders()
+	fmt.Println("The check gave: ", internal)
 
-	reference := 1
-
-	for _, v := range test {
-       if v != reference {
-         result = append(result, v)
-       }
-    }
-    fmt.Println(result)
 }
 /*
 	aliveChan := make(chan string)

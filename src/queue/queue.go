@@ -7,6 +7,8 @@ import(
 	"strings"
 	"strconv"
 	"math"
+	"encoding/json"
+    "io/ioutil"
 )
 
 func GetElevatorCost(elevator Elevator, order Order, updateFloorChan chan int) int {
@@ -109,11 +111,11 @@ func GetInsertOrderPriority(elevator Elevator, order Order) int{
 		return -1
 }
 
-func InsertOrder(elevator Elevator, order Order){
+func InsertOrder(elevator Elevator, order Order) Elevator{
 	fmt.Println("|||||||||||||Inserting order||||||||||")
 	if order.Floor == 0{
 		fmt.Println("ERROR in InsertOrder: order.Floor == 0")
-		return
+		return elevator
 	}
 	placement := GetInsertOrderPlacement(elevator, order)
 	fmt.Println("Placement of ", order, " = ", placement)
@@ -128,6 +130,7 @@ func InsertOrder(elevator Elevator, order Order){
 		elevator.OrderQueue[i] = insert
 		insert = temp
 	}
+	return elevator
 }
 
 func GetLocalElevatorIndex(elevList []Elevator, localIp string)int{
@@ -190,7 +193,60 @@ func IsNotInElevator(elevator Elevator, order Order) bool {
 	return true
 }
 
+func checkForInternalOrderBackup(elevator Elevator) Elevator{
 
+	dat, err := ioutil.ReadFile("internalOrderBackupFile")
+	var readOrders []int
+
+	if err != nil {
+		internalOrders := []int{0,0,0,0}
+		d1,_ := json.Marshal(internalOrders)
+	    err := ioutil.WriteFile("internalOrderBackupFile", d1, 0644)
+	    fmt.Println("No internal orders stored. Writing to new file...")
+	    if err != nil{
+	    	fmt.Println("ERROR!!! writing to internalOrderBackupFile.")
+	    }
+
+	    dat, err := ioutil.ReadFile("internalOrderBackupFile")
+	  
+		json.Unmarshal(dat, &readOrders)
+	    fmt.Println("Made new file with empty orders: ", readOrders)
+	}else{
+		
+		json.Unmarshal(dat, &readOrders)
+		fmt.Println("Found file for internal orders. The orders were: ", readOrders)
+	}
+	if len(readOrders) != 4 {
+		fmt.Println("CORRUPTED READ!!! Parsing empty order list to elevator.")
+		readOrders = []int{0,0,0,0}
+	}
+
+	for i,value := range readOrders{
+		if value == 1 {
+			elevator = InsertOrder(elevator, Order{i+1,ORDER_INTERNAL})
+		}
+	}
+
+	return elevator
+	
+}
+
+func UpdateInternalOrderBackupFile(elevator Elevator){
+	internalOrders := []int{0,0,0,0}
+	
+	for _, orderInstance := range elevator.OrderQueue{
+		if orderInstance.Orientation == ORDER_INTERNAL{
+			internalOrders[orderInstance.Floor-1] = 1
+		}
+	}
+
+	d1,_ := json.Marshal(internalOrders)
+    err := ioutil.WriteFile("internalOrderBackupFile", d1, 0644)
+
+    if err != nil{
+    	fmt.Println("ERROR!!! writing to internalOrderBackupFile.")
+    }
+}
 
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, recieveCostChan chan map[string]Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order,
@@ -210,7 +266,11 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	localIp := <- localIpChan //Gets the local IP
 	
 	elevators = HandleNewElevator(elevators, localIp) //Ads the Ip to empty slot of elevators
+
 	localElevatorIndex := GetLocalElevatorIndex(elevators, localIp)
+
+	elevators[localElevatorIndex] = checkForInternalOrderBackup(elevators[localElevatorIndex])
+
 	receiveDriverUpdateChan <- elevators[0]
 	elevators[localElevatorIndex] = <- receiveDriverUpdateChan //Ads information from elevator (driver)
 
@@ -228,7 +288,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 			fmt.Println("localOrders")
 			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
 				if localOrder.Orientation == ORDER_INTERNAL{
-					InsertOrder(elevators[localElevatorIndex], localOrder)
+					elevators[localElevatorIndex] = InsertOrder(elevators[localElevatorIndex], localOrder)
 					localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
 				}else{
 					orderToNetworkChan <- localOrder
@@ -297,7 +357,6 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 			if updateElevatorFromNetwork.Ip != localIp{
 				for i := 0; i < N_ELEVATORS; i++{
 					if elevators[i].Ip == updateElevatorFromNetwork.Ip{
-						
 						elevators[i] = updateElevatorFromNetwork
 						break
 					}
@@ -306,11 +365,9 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 		//Updating the other module
 		case <- timedUpdateChanNetwork: // Timed update to network
 		//fmt.Println("timedUpdateChanNetwork")
-			//fmt.Println(elevators)
 			updateNetworkChan <- elevators[localElevatorIndex]
-			//fmt.Println("Waiting")
-			
-			//fmt.Println(elevators)
+			UpdateInternalOrderBackupFile(elevators[localElevatorIndex])
+
 		case <- timedUpdateChanDriver:
 			//fmt.Println("timedUpdateChanDriver")
 			//fmt.Println("Sending :       ", elevators[localElevatorIndex])
