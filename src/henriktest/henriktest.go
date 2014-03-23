@@ -4,61 +4,18 @@ package main
 
 //import "strings"
 //import "strconv"
-//import "driver"
+import "driver"
 //import "time"
 //import "network"
 //import ."types"
 
-import (
-   // "bufio"
-    "fmt"
-    //"io"
-    "encoding/json"
-    "io/ioutil"
-    //"os"
-)
 
-func check(e error) {
-    if e != nil {
-        panic(e)
-	   
-    }
-}
 
-func checkForInternalOrders() []int{
-	dat, err := ioutil.ReadFile("internalOrderBackupFile")
-	
-	var readOrders []int
-
-	if err != nil {
-		internalOrders := []int{0,0,0,0}
-		d1,_ := json.Marshal(internalOrders)
-	    err := ioutil.WriteFile("internalOrderBackupFile", d1, 0644)
-	    fmt.Println("No internal orders stored. Writing to new file...")
-	    check(err)
-
-	    dat, err := ioutil.ReadFile("internalOrderBackupFile")
-	  
-		err = json.Unmarshal(dat, &readOrders)
-	    fmt.Println("Made new file with empty orders: ", readOrders)
-	}else{
-		
-		err = json.Unmarshal(dat, &readOrders)
-		fmt.Println("Found file for internal orders. The orders were: ", readOrders)
-	}
-	if len(readOrders) != 4 {
-		fmt.Println("CORRUPTED READ!!! Parsing empty order list to elevator.")
-		return []int{0,0,0,0}
-	}
-
-	return readOrders
-}
 
 func main(){
 
-	internal := checkForInternalOrders()
-	fmt.Println("The check gave: ", internal)
-
+	driver.IoInit()
+	driver.ClearAllLights()
 }
 /*
 	aliveChan := make(chan string)
