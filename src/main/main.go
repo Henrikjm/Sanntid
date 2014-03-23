@@ -10,15 +10,6 @@ import(
 
 
 func main() {
-/*
-//NOTES::::::::::::
-1. Concidering changing the channel updating the DRIVER to be only a Order type, not entire elevator
-concerened that queue might overwrite the direction and lastfloor variables, not ideal.
-
-
-
-//::::::::::::::::::::
-*/
 
 exitChan := make(chan string)
 //---NETWORK - QUEUE

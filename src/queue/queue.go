@@ -191,7 +191,6 @@ func IsNotInElevator(elevator Elevator, order Order) bool {
 }
 
 func checkForInternalOrderBackup(elevator Elevator) Elevator{
-
 	dat, err := ioutil.ReadFile("internalOrderBackupFile")
 	var readOrders []int
 
