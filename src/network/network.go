@@ -11,23 +11,23 @@ import (
 )
 
 const (
-	ORDERPORT string = "44021"
-	ALIVEPORT string = "44042"
-	COSTPORT string = "44013"
-	ELEVATORPORT string = "44064"
-	ORDERCONFIRMATIONPORT string = "44075"
-	COSTCONFIRMATIONPORT string = "44076"
+	ORDERPORT string = "42035"
+	ALIVEPORT string = "42012"
+	COSTPORT string = "42013"
+	ELEVATORPORT string = "42064"
+	ORDERCONFIRMATIONPORT string = "42075"
+	COSTCONFIRMATIONPORT string = "42076"
 )
 
 
-//OK
+
 func CheckError(err error, errorMsg string) {
 	if err != nil {
 		fmt.Println("!!Error type: " + errorMsg,"!!")
 	}
 }
 
-//OK
+
 func ImAliveUDP() {
 	fmt.Println("Establishing IAmAlive...")
 	sendAddr, err := net.ResolveUDPAddr("udp4", "129.241.187.255:"+ALIVEPORT)
@@ -41,22 +41,20 @@ func ImAliveUDP() {
 	}
 }
 
-//OK
+
 func RecieveAliveUDP(aliveChan chan string){
 	data := make([]byte, 1024)
 	conn := MakeListenerConn(ALIVEPORT, "RecieveAliveUDP")
 	for {		
 		_, addr, err := conn.ReadFromUDP(data)
 		CheckError(err, "ERROR ReadFromUDP")
-		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":") //Fjerner PORT og semikolon
-
-		aliveChan <- ip //add/update alive map
-		
+		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":")
+		aliveChan <- ip
 	}
 
 }
 
-//OK
+
 func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
 	fmt.Println("UpdateAliveUDP Started")
 	go ImAliveUDP()
@@ -64,12 +62,10 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 
 	aliveMap := make(map[string]time.Time)
 
-
 	for {
 		select{
 			case incomingIP := <-aliveChan:
 				if _,ok := aliveMap[incomingIP]; ok {
-					//fmt.Println("Updating alive for: ", incomingIP)
 					aliveMap[incomingIP] = time.Now()
 				}else{
 					aliveMap[incomingIP]=time.Now()
@@ -82,9 +78,9 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 			case <-updateForConfirmationChan:
 				updateForConfirmationChan <- aliveMap
 			default:
-				time.Sleep(time.Millisecond * 10)
+				time.Sleep(time.Millisecond * 1)
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
-					if time.Now().Sub(value) > 1000000000 {
+					if time.Now().Sub(value) > 1500000000 {
 						delete(aliveMap, ip)
 						changedElevatorChan <- Change{"dead", ip}
 					}
@@ -121,20 +117,14 @@ func RecieveOrderFromUDP(newOrderFromUDPChan chan Order, recieveCostChan chan ma
 
 	for {
 		time.Sleep(time.Millisecond * 1)
-		n, _, err := conn.ReadFromUDP(data) 	//motta ordre
+		n, _, err := conn.ReadFromUDP(data) 	
 
-		//dummy := []byte{0}
-
-		//data = bytes.TrimSuffix(bytes.SplitAfter(data, dummy)[0], dummy)
 		CheckError(err, "ERROR ReadFromUDP")
 		sender.Write([]byte("OrderRecieved"))
 		var newOrder Order
 		json.Unmarshal(data[:n], &newOrder)
 		
 		fmt.Println("Recieved order over UDP:      ", newOrder)
-		
-		
-
 			go func (newOrder Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time, conn *net.UDPConn){ //Må hente cost "indiciduelt..."
 				
 				newOrderFromUDPChan <- newOrder //videresend ordre til costevaluering
@@ -167,25 +157,20 @@ func SendOrderToUDP(orderToNetworkChan chan Order, deadOrderToUDPChan chan Order
 }
 
 func SendCost(sendCostChan chan Cost) {
-	
 	for{
 		time.Sleep(time.Millisecond * 1)
 		sender := MakeSenderConn(COSTPORT)
 		cost := <- sendCostChan
 		
-		
 		costB,_ := json.Marshal(cost)
-		fmt.Println("Sending cost evaluation to UDP. Cost is:            ", cost)
-		
+		fmt.Println("Sending cost evaluation to UDP. Cost is: ", cost)
 		go func(sender *net.UDPConn, costB []byte){
 			fmt.Println("Started sending cost")
 			for i := 0; i < 10; i++ {
 				time.Sleep(time.Millisecond * 10)
 				sender.Write(costB)
 			}
-			//fmt.Println("Stopped sendning cost")
 		}(sender, costB)
-
 	}
 }
 
@@ -202,8 +187,6 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 	updateForCostChan <- aliveMap
 	aliveMap = <- updateForCostChan
 
-
-	//Lytter til UDP i 500ms eller til alle har levert "kostrapport". Dersom alle leverer kost vil den videresende et Map med IP og kost
 	t0 := time.Now()
 	fmt.Println("Listening for cost updates.")
 	for {
@@ -215,25 +198,18 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 				CheckError(err, "ERROR!! while recieving cost")
 		}
 
-		//dummy := []byte{0}
-		//data = bytes.TrimSuffix(bytes.SplitAfter(data, dummy)[0], dummy)
 		json.Unmarshal(data[:n], &costInstance)
-
-		
-
 		if err == nil && order == costInstance.Order{
 			if _,ok := costMap[costInstance.Ip]; !ok{
 				fmt.Println("Order is: ", order, "costInstance.Order is:", costInstance.Order)
 			}
-			if _,ok := costMap[costInstance.Ip]; !ok && costInstance.Order == order{ //Legger til
+			if _,ok := costMap[costInstance.Ip]; !ok && costInstance.Order == order{
 				fmt.Println("Saving cost from: ", costInstance.Ip)
 				costMap[costInstance.Ip] = costInstance
 			}
-			if len(costMap) == len(aliveMap){ //Sjekker om vi har fått svar fra alle
+			if len(costMap) == len(aliveMap){
 				fmt.Println("Cost recived from everyone. Forwarding results.")
 				recieveCostChan <- costMap
-				
-				
 				return true
 			}
 		}
@@ -299,20 +275,17 @@ func RecieveOrderConfirmation(order Order, orderConfirmationChan chan bool, upda
 	}
 }
 
-func SendElevator(updateNetworkChan chan Elevator){ //Ikke testet. Designet for å være goroutine.
+func SendElevator(updateNetworkChan chan Elevator){ 
 	conn := MakeSenderConn(ELEVATORPORT)
-
-
-
 	for{
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 100)
 		dataToSend := <- updateNetworkChan
 		elevatorB,_ := json.Marshal(dataToSend)
 		conn.Write([]byte(elevatorB))
 
 	}
 }
-func RecieveElevator(receiveElevatorChan chan Elevator){ //Ikke testet. Designet for å være goroutine.
+func RecieveElevator(receiveElevatorChan chan Elevator){ 
 	conn := MakeListenerConn(ELEVATORPORT, "RecieveElevator")
 	data := make([]byte, 1024)
 

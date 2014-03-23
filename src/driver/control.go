@@ -20,14 +20,22 @@ func SetNewDirection(elevator Elevator) Elevator{
 	return elevator
 }
 
-func ReachedFloorClearOrders(elevator Elevator) []Order{//, floor int){
+func ReachedFloorClearOrders(elevator Elevator,  changeInElevator chan bool) Elevator{//, floor int){
 	var temp1 []Order
 	var temp2 []Order
 	var result []Order
 	//var oppositeDir OrderDir
 	
 	currentFloor := ReadFloor()
-	
+
+
+	if len(elevator.OrderQueue) < 1{
+		for len(elevator.OrderQueue)<MAX_ORDERS {
+			elevator.OrderQueue = append(elevator.OrderQueue, Order{0,0})
+		}
+	}
+
+
 	if currentFloor == elevator.OrderQueue[0].Floor{
 		//Fjerner alle ordre lik den som håndteres nå.
 		for _, orderInstance := range elevator.OrderQueue{
@@ -63,38 +71,14 @@ func ReachedFloorClearOrders(elevator Elevator) []Order{//, floor int){
     	}
     }
 
-	return result	
-}
-	/*if elevator.OrderQueue[1].Floor > elevator.OrderQueue[0].Floor{
-		oppositeDir = ORDER_DOWN
-	}else if elevator.OrderQueue[1].Floor < elevator.OrderQueue[0].Floor{
-		oppositeDir = ORDER_UP
-	}
+
+    elevator.OrderQueue = result
+    
+	changeInElevator <- true
 	
-	if elevator.OrderQueue[0].Floor == elevator.OrderQueue[1].Floor{
-		for _, orderInstance := range elevator.OrderQueue{
-			if orderInstance.Floor != ReadFloor(){
-				result = append(result, orderInstance)
-			}
-		}
-	}else if elevator.OrderQueue[1].Floor == 0{
-		for _, orderInstance := range elevator.OrderQueue {
-	   		if orderInstance.Floor != 0 && orderInstance != elevator.OrderQueue[0]{
-	     		result = append(result, orderInstance)
-			}
-		}
-	}else{
-		for _, orderInstance := range elevator.OrderQueue {
-	   		if orderInstance.Floor != 0 && (orderInstance.Floor != ReadFloor() || orderInstance.Orientation == oppositeDir){
-	     		result = append(result, orderInstance)
-			}
-		}
-	}
-    for {
-    	if len(result) < MAX_ORDERS{
-    		result = append(result,Order{0,0})
-    	}else{break}
-    }*/
+
+	return elevator
+}
 
 	/*jump := 1
 	if (elevator.OrderQueue[0].Floor == elevator.OrderQueue[1].Floor) && 
@@ -113,13 +97,6 @@ func ReachedFloorClearOrders(elevator Elevator) []Order{//, floor int){
 	
 
 
-func TimedUpdate(timedUpdateChan chan string, interval int){
-	for{
-		timedUpdateChan <- "Update"
-		time.Sleep(time.Millisecond * time.Duration(interval))
-	}
-}
-
 func UpdateFloor(updateFloorChan chan int){
 	for{
 		select{
@@ -137,9 +114,6 @@ func UpdateLights(timedLightUpdate chan []Elevator) {
 
 	for{
 		
-		time.Sleep(time.Millisecond*50)
-
-		timedLightUpdate <- elevatorsForLight
 		elevatorsForLight = <- timedLightUpdate
 		//fmt.Println(elevatorsForLight)
 		for i := 0; i < len(lightArray); i++ {
@@ -203,7 +177,14 @@ func InitElev(localElevator Elevator)(Elevator, string){
 	return localElevator, "idle"
 }
 
-func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator){
+func TimedUpdate(timedUpdateChan chan string){
+	for{
+		timedUpdateChan <- "Update"
+		time.Sleep(time.Millisecond * 50)
+	}
+}
+
+func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool){
 	fmt.Println("ControlHandler started.")
 	//variables
 	var(
@@ -211,24 +192,27 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, r
 		waitTime time.Time
 	)
 
-	queueUpdateInterval := 50
 
 	//channels
 	motorChannel = make(chan MoveDir)
 	setOrderLightChannel = make(chan []Order)
 	stopButtonChannel = make(chan bool)
-	timedUpdateQueueChan := make(chan string)
-
+	changeInElevator := make(chan bool, 1)
+	timedUpdateChan := make(chan string)
+	
 	//Function calls
 	IoInit()
+
+	
 	go ClearAllLights()
 	go MotorControl()
 	go GetOrderButton(localOrderChan)
 	go SetOrderLights()
-	go TimedUpdate(timedUpdateQueueChan, queueUpdateInterval)
-	go SetOrderLights()
+	go TimedUpdate(timedUpdateChan)
 	go UpdateFloor(updateFloorChan)
-	go UpdateLights(timedLightUpdate)	
+	go UpdateLights(timedLightUpdate)
+
+	
 
 	//testvariables
 	//OrderQueue := []Order{Order{1, ORDER_INTERNAL}, Order{1, ORDER_UP}, Order{2, ORDER_UP}, Order{2, ORDER_INTERNAL}, Order{3, ORDER_UP}, Order{3, ORDER_INTERNAL}, Order{4, ORDER_INTERNAL}, Order{4, ORDER_DOWN}, Order{3, ORDER_DOWN},Order{2,ORDER_DOWN}}	
@@ -241,18 +225,17 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, r
 		time.Sleep(time.Millisecond * 1)
 
 		select{
+		case <-changeInElevator:
+			updateFromDriverChan <- localElevator
+    		localElevator = <- updateFromDriverChan
 
-		case localElevator = <- updateDriverChan: 	
-			setOrderLightChannel <- localElevator.OrderQueue
-
-		case <- timedUpdateQueueChan:
-			go func(receiveDriverUpdateChan chan Elevator, elevatorUpdate Elevator){
-			receiveDriverUpdateChan <- elevatorUpdate
-			}(receiveDriverUpdateChan, localElevator)
-			
-
-		case localElevator = <- localUpdateDriverChan:	
+    	case localElevator = <- localUpdateDriverChan:	
 				setOrderLightChannel <- localElevator.OrderQueue
+
+		case <-timedUpdateChan:
+			readyForUpdateChan <- true
+			localElevator = <- updateDriverChan
+		
 
 		default: //STATE MACHINE!
 			
@@ -287,12 +270,10 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, r
 
 					fmt.Println("Erasing ", localElevator.OrderQueue[0] , "from floor ", reachedFloor, "STATE:" , state)
 					
-					localElevator.OrderQueue = ReachedFloorClearOrders(localElevator)
+					localElevator = ReachedFloorClearOrders(localElevator, changeInElevator) //bør oppdatere queue
 					
-					go func(receiveDriverUpdateChan chan Elevator, elevatorUpdate Elevator){
-						receiveDriverUpdateChan <- elevatorUpdate
-					}(receiveDriverUpdateChan, localElevator)
 					
+
 					waitTime = time.Now().Add(2*time.Second)
 				}else if localElevator.Direction != MOVE_STOP{
 					state = "moving"
@@ -318,25 +299,27 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, r
 
 				ClearOrderLight(Order{ReadFloor(),ORDER_INTERNAL})
 
+				if len(localElevator.OrderQueue)>1{
+					if localElevator.OrderQueue[0].Floor > 0{
+						if localElevator.OrderQueue[0].Floor == reachedFloor{
+							
+							localElevator = ReachedFloorClearOrders(localElevator, changeInElevator) 
+										
+						}else{
+							localElevator = SetNewDirection(localElevator)
+							motorChannel <- localElevator.Direction
+							state = "moving"
+						}	
+					}else if(ReadFloor() == 0){
+						fmt.Println("ERROR!!! The elevator has stopped between floors.")
+					}
 
-				if localElevator.OrderQueue[0].Floor > 0{
-					if localElevator.OrderQueue[0].Floor == reachedFloor{
-						
-						localElevator.OrderQueue = ReachedFloorClearOrders(localElevator) 
-						
-						go func(receiveDriverUpdateChan chan Elevator, elevatorUpdate Elevator){
-							receiveDriverUpdateChan <- elevatorUpdate
-						}(receiveDriverUpdateChan, localElevator)
-						
-					}else{
-						localElevator = SetNewDirection(localElevator)
-						motorChannel <- localElevator.Direction
-						state = "moving"
-					}	
-				} else if(ReadFloor() == 0){
-					fmt.Println("ERROR!!! The elevator has stopped between floors.")
+				}else{
+					fmt.Println("Corrupted localElevator!!!")
+					localElevator = ReachedFloorClearOrders(localElevator,  changeInElevator)
 				}
 			}
 		}
 	}
+
 }

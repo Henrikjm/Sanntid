@@ -12,6 +12,14 @@ import(
 )
 
 func GetElevatorCost(elevator Elevator, order Order, updateFloorChan chan int) int {
+
+	if len(elevator.OrderQueue)<1{
+		fmt.Println("CORRUPTED LOCAL ELEVATOR!!!!")
+		for len(elevator.OrderQueue)<MAX_ORDERS{
+			elevator.OrderQueue = append(elevator.OrderQueue, Order{0,0})
+		}
+	}
+
 	score := 0
 	//correct direction plays 4 points difference
 	if elevator.Direction == MOVE_STOP{
@@ -51,6 +59,7 @@ func GetNumberOfStopsBeforeOrder(elevator Elevator, order Order)int{
 
 func GetInsertOrderPlacement(elevator Elevator, order Order) int{
 	var oldPri int
+
 	if elevator.OrderQueue[0].Floor == 0{
 		return 0
 	}
@@ -147,7 +156,6 @@ func GetLocalElevatorIndex(elevList []Elevator, localIp string)int{
 func HandleDeadElev(elevList []Elevator, ip string, deadOrderToUDPChan chan Order) []Elevator{
 	var i int
 	var deadElevQueue []Order
-	fmt.Println(elevList)
 	for i = 0 ; i < len(elevList); i++{
 		if elevList[i].Ip == ip{
 			deadElevQueue = elevList[i].OrderQueue
@@ -160,7 +168,6 @@ func HandleDeadElev(elevList []Elevator, ip string, deadOrderToUDPChan chan Orde
 			deadOrderToUDPChan <- deadElevQueue[i]
 		}
 	}
-	fmt.Println(elevList)
 	return elevList
 }
 
@@ -175,12 +182,9 @@ func HandleNewElevator(elevList []Elevator, ip string) []Elevator{
 	return elevList
 }
 
-func TimedUpdate(timedUpdateChan chan string){
-	for{
-		timedUpdateChan <- "Update"
-		time.Sleep(time.Millisecond * 50)
-	}
-}
+
+
+
 
 func IsNotInElevator(elevator Elevator, order Order) bool {
 	for i :=0; i < len(elevator.OrderQueue); i++{
@@ -250,46 +254,34 @@ func UpdateInternalOrderBackupFile(elevator Elevator){
 
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, recieveCostChan chan map[string]Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order,
-	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator){
+	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool){
 	
-	fmt.Println("QueueHandler started.")
-		
-	//Variables
-	
-	timedUpdateChanNetwork := make(chan string)
-	timedUpdateChanDriver := make(chan string)
-	
+	fmt.Println("QueueHandler started.")	
+
 	//Making situation picture
 	elevators := make([]Elevator, N_ELEVATORS) //empty list of elevators
-	
 	localIpChan <- "LocalIp"
 	localIp := <- localIpChan //Gets the local IP
-	
 	elevators = HandleNewElevator(elevators, localIp) //Ads the Ip to empty slot of elevators
-
 	localElevatorIndex := GetLocalElevatorIndex(elevators, localIp)
-
 	elevators[localElevatorIndex] = checkForInternalOrderBackup(elevators[localElevatorIndex])
-
 	receiveDriverUpdateChan <- elevators[0]
 	elevators[localElevatorIndex] = <- receiveDriverUpdateChan //Ads information from elevator (driver)
 
-	go TimedUpdate(timedUpdateChanNetwork)
-	go TimedUpdate(timedUpdateChanDriver)
+	updateDriverChan <- elevators[localElevatorIndex]
 
-	//Listening and handling
 	fmt.Println("QueueHandler initiated.")
 	for{
 		time.Sleep(time.Millisecond * 1)
 		
 		select{
-		//receiving updates from other modules
+		//receiving updates from other module
 		case localOrder := <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
 			fmt.Println("localOrders")
 			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
 				if localOrder.Orientation == ORDER_INTERNAL{
 					elevators[localElevatorIndex] = InsertOrder(elevators[localElevatorIndex], localOrder)
-					localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
+					//localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
 				}else{
 					orderToNetworkChan <- localOrder
 				}
@@ -346,11 +338,6 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 
-		case elevators[localElevatorIndex] = <- receiveDriverUpdateChan:
-			//fmt.Println("RecievedDriverUpdate")
-			//elevators[localElevatorIndex].Direction = updateElevatorFromDriver.Direction
-			//elevators[localElevatorIndex].LastFloor = updateElevatorFromDriver.LastFloor
-
 		case updateElevatorFromNetwork := <- receiveElevatorChan: // Recieves updates from all-over, updates accordingly
 			//fmt.Println("RecievedElevator")
 			//fmt.Println(updateElevator.Ip, updateElevator.OrderQueue[0])
@@ -362,21 +349,19 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					}
 				}
 			}
-		//Updating the other module
-		case <- timedUpdateChanNetwork: // Timed update to network
-		//fmt.Println("timedUpdateChanNetwork")
-			updateNetworkChan <- elevators[localElevatorIndex]
-			UpdateInternalOrderBackupFile(elevators[localElevatorIndex])
 
-		case <- timedUpdateChanDriver:
+		//Updating the other module
+		case elevators[localElevatorIndex] = <- updateFromDriverChan:
 			//fmt.Println("timedUpdateChanDriver")
-			//fmt.Println("Sending :       ", elevators[localElevatorIndex])
-			updateDriverChan <- elevators[localElevatorIndex]
-		case <- timedLightUpdate:
-			//fmt.Println("timedLg")
+			updateFromDriverChan <- elevators[localElevatorIndex]
+			
+		case <- readyForUpdateChan: // Timed update to network
+		fmt.Println("timedUpdate")
+			updateNetworkChan <- elevators[localElevatorIndex]
 			timedLightUpdate <- elevators
-		
-		
+			updateDriverChan <- elevators[localElevatorIndex]
+			go func(elevator Elevator){UpdateInternalOrderBackupFile(elevator)}(elevators[localElevatorIndex])
+
 		}
 	}
 }
