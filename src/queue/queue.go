@@ -252,11 +252,15 @@ func UpdateInternalOrderBackupFile(elevator Elevator){
     }
 }
 
+
+
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, recieveCostChan chan map[string]Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order,
 	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool){
 	
 	fmt.Println("QueueHandler started.")	
+
+	
 
 	//Making situation picture
 	elevators := make([]Elevator, N_ELEVATORS) //empty list of elevators
@@ -271,6 +275,9 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 	updateDriverChan <- elevators[localElevatorIndex]
 
 	fmt.Println("QueueHandler initiated.")
+
+	
+
 	for{
 		time.Sleep(time.Millisecond * 1)
 		
@@ -356,12 +363,12 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 			updateFromDriverChan <- elevators[localElevatorIndex]
 			
 		case <- readyForUpdateChan: // Timed update to network
-		fmt.Println("timedUpdate")
+			//fmt.Println("timedUpdate")
 			updateNetworkChan <- elevators[localElevatorIndex]
 			timedLightUpdate <- elevators
 			updateDriverChan <- elevators[localElevatorIndex]
 			go func(elevator Elevator){UpdateInternalOrderBackupFile(elevator)}(elevators[localElevatorIndex])
-
-		}
+		
 	}
+}
 }

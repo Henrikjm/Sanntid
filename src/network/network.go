@@ -80,7 +80,7 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 			default:
 				time.Sleep(time.Millisecond * 1)
 				for ip, value := range aliveMap {//Iterate through alive-map and delete timed-out machines
-					if time.Now().Sub(value) > 1500000000 {
+					if time.Now().Sub(value) > 1000000000 {
 						delete(aliveMap, ip)
 						changedElevatorChan <- Change{"dead", ip}
 					}

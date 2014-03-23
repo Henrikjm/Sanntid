@@ -180,7 +180,7 @@ func InitElev(localElevator Elevator)(Elevator, string){
 func TimedUpdate(timedUpdateChan chan string){
 	for{
 		timedUpdateChan <- "Update"
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 200)
 	}
 }
 
@@ -228,13 +228,18 @@ func ControlHandler(localOrderChan chan Order, updateDriverChan chan Elevator, r
 		case <-changeInElevator:
 			updateFromDriverChan <- localElevator
     		localElevator = <- updateFromDriverChan
+    		setOrderLightChannel <- localElevator.OrderQueue
 
-    	case localElevator = <- localUpdateDriverChan:	
-				setOrderLightChannel <- localElevator.OrderQueue
 
+    	case localElevator = <- localUpdateDriverChan:
+    		setOrderLightChannel <- localElevator.OrderQueue
+	
+				
 		case <-timedUpdateChan:
 			readyForUpdateChan <- true
 			localElevator = <- updateDriverChan
+			setOrderLightChannel <- localElevator.OrderQueue
+
 		
 
 		default: //STATE MACHINE!
