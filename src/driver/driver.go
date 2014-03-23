@@ -57,7 +57,7 @@ func SetStopLight()     { SetBit(LIGHT_STOP) }
 func SetOrderLights(){
 	for{
 		orders := <- setOrderLightChannel
-		for i:= 0; i < MAX_ORDERS; i++{
+		for i:= 0; i < len(orders); i++{
 			switch {/*
 			case orders[i].Floor == 1 && orders[i].Orientation == ORDER_UP:
 				SetBit(LIGHT_UP1)
