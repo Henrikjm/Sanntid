@@ -21,7 +21,7 @@ func GetElevatorCost(elevator Elevator, order Order, updateFloorChan chan int) i
 	}
 
 	score := 0
-	//If the elevator is stopped the number of floors are added, if it moves correct direction plays 5 points difference
+	//correct direction plays 5 points difference
 	if elevator.Direction == MOVE_STOP{
 		score += GetNumberOfFloorsForOrder(updateFloorChan, order)
 
@@ -45,6 +45,7 @@ func GetNumberOfFloorsForOrder(updateFloorChan chan int, order Order) int{
 func GetNumberOfStopsBeforeOrder(elevator Elevator, order Order)int{
 	placement := GetInsertOrderPlacement(elevator, order)
 	stops := placement
+
 	for j:= 0; j < placement; j++{ //Removing common objective orders from score
 		if (elevator.OrderQueue[j].Floor == elevator.OrderQueue[j+1].Floor) && (elevator.OrderQueue[j].Orientation == ORDER_INTERNAL || elevator.OrderQueue[j+1].Orientation == ORDER_INTERNAL){
 			j += 1
@@ -63,6 +64,7 @@ func GetInsertOrderPlacement(elevator Elevator, order Order) int{
 	newPri := GetInsertOrderPriority(elevator, order)
 	for i := 0; i < len(elevator.OrderQueue); i++{
 		oldPri = GetInsertOrderPriority(elevator, elevator.OrderQueue[i])
+		fmt.Println("newPri = ", newPri, "oldPri = ", oldPri)
 		if oldPri >= newPri{
 				//newPri 1 and means that the order is "on-the-way" of the tour and reretour respectively, we optimize with respect to the current direction
 			if newPri == oldPri{
@@ -123,6 +125,8 @@ func InsertOrder(elevator Elevator, order Order) Elevator{
 		return elevator
 	}
 	placement := GetInsertOrderPlacement(elevator, order)
+	fmt.Println("Placement of ", order, " = ", placement)
+
 	var temp, insert Order
 	insert = order
 	for i := placement; i <len(elevator.OrderQueue); i++{
@@ -164,7 +168,7 @@ func HandleDeadElev(elevList []Elevator, ip string, deadOrderToUDPChan chan Orde
 
 func HandleNewElevator(elevList []Elevator, ip string) []Elevator{
 	for i := 0; i < len(elevList); i++{
-		if elevList[i].Ip == ""{ //tom plass
+		if elevList[i].Ip == ""{ 
 			elevList[i].Ip = ip
 			elevList[i].OrderQueue = make([]Order,MAX_ORDERS)
 			break
@@ -173,24 +177,9 @@ func HandleNewElevator(elevList []Elevator, ip string) []Elevator{
 	return elevList
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-func TimedUpdate(timedUpdateChan chan string){
-	for{
-		timedUpdateChan <- "Update"
-		time.Sleep(time.Millisecond * 100)
-	}
-}
-=======
 
 
 
->>>>>>> FETCH_HEAD
-=======
-
-
-
->>>>>>> FETCH_HEAD
 
 func IsNotInElevator(elevator Elevator, order Order) bool {
 	for i :=0; i < len(elevator.OrderQueue); i++{
@@ -201,7 +190,7 @@ func IsNotInElevator(elevator Elevator, order Order) bool {
 	return true
 }
 
-func CheckForInternalOrderBackup(elevator Elevator) Elevator{
+func checkForInternalOrderBackup(elevator Elevator) Elevator{
 
 	dat, err := ioutil.ReadFile("internalOrderBackupFile")
 	var readOrders []int
@@ -216,15 +205,14 @@ func CheckForInternalOrderBackup(elevator Elevator) Elevator{
 	    }
 
 	    dat, err := ioutil.ReadFile("internalOrderBackupFile")
-	  
+
 		json.Unmarshal(dat, &readOrders)
 	    fmt.Println("Made new file with empty orders: ", readOrders)
 	}else{
-		
+
 		json.Unmarshal(dat, &readOrders)
 		fmt.Println("Found file for internal orders. The orders were: ", readOrders)
 	}
-
 	if len(readOrders) != 4 {
 		fmt.Println("CORRUPTED READ!!! Parsing empty order list to elevator.")
 		readOrders = []int{0,0,0,0}
@@ -235,13 +223,14 @@ func CheckForInternalOrderBackup(elevator Elevator) Elevator{
 			elevator = InsertOrder(elevator, Order{i+1,ORDER_INTERNAL})
 		}
 	}
+
 	return elevator
-	
+
 }
 
 func UpdateInternalOrderBackupFile(elevator Elevator){
 	internalOrders := []int{0,0,0,0}
-	
+
 	for _, orderInstance := range elevator.OrderQueue{
 		if orderInstance.Orientation == ORDER_INTERNAL{
 			internalOrders[orderInstance.Floor-1] = 1
@@ -256,114 +245,43 @@ func UpdateInternalOrderBackupFile(elevator Elevator){
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-func FindBestCost(receivedCostMap map[string]Cost) Cost{
-	best := Cost{}
-	best.Cost = 20
-	for _, recievedCost :=  range receivedCostMap{
-		if recievedCost.Cost < best.Cost{
-			best = recievedCost
-		}
-	}
 
-	return FindBestIPForCost(receivedCostMap, best)
-}
-
-func FindBestIPForCost(receivedCostMap map[string]Cost, best Cost) Cost{
-	highestIp := 0 
-		newIp := 0
-		for _,recievedCost := range receivedCostMap{
-			if recievedCost.Cost == best.Cost{
-				dummyIpStr := strings.Trim(strings.SplitAfter(recievedCost.Ip, "187")[1], ".")
-				newIp, _ = strconv.Atoi(dummyIpStr)
-				fmt.Println(newIp, highestIp)
-				if newIp > highestIp{
-					highestIp = newIp
-					best = recievedCost
-				}
-			}
-		}
-	return best
-}
-=======
-
->>>>>>> FETCH_HEAD
-=======
-
->>>>>>> FETCH_HEAD
 
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, recieveCostChan chan map[string]Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order,
 	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool){
-	
-<<<<<<< HEAD
-<<<<<<< HEAD
-	fmt.Println("QueueHandler started.")
-			
-	timedUpdateChanNetwork := make(chan string)
-	timedUpdateChanDriver := make(chan string)
-	elevators := make([]Elevator, N_ELEVATORS) //empty list of elevators
-	
-	//Initializing the list for elevators and checks for internal order backups
-	localIpChan <- "LocalIp"
-	localIp := <- localIpChan //Gets the local IP from the network module
-	elevators = HandleNewElevator(elevators, localIp) //Ads the Ip to empty slot of elevators
-	localElevatorIndex := GetLocalElevatorIndex(elevators, localIp)
-=======
-=======
->>>>>>> FETCH_HEAD
+
 	fmt.Println("QueueHandler started.")	
 
-	
+
 
 	//Making situation picture
-	elevators := make([]Elevator, N_ELEVATORS) //empty list of elevators
+	elevators := make([]Elevator, N_ELEVATORS) 
 	localIpChan <- "LocalIp"
-	localIp := <- localIpChan //Gets the local IP
-	elevators = HandleNewElevator(elevators, localIp) //Ads the Ip to empty slot of elevators
+	localIp := <- localIpChan
+	elevators = HandleNewElevator(elevators, localIp) 
 	localElevatorIndex := GetLocalElevatorIndex(elevators, localIp)
 	elevators[localElevatorIndex] = checkForInternalOrderBackup(elevators[localElevatorIndex])
-<<<<<<< HEAD
->>>>>>> FETCH_HEAD
-=======
->>>>>>> FETCH_HEAD
 	receiveDriverUpdateChan <- elevators[0]
-	elevators[localElevatorIndex] = <- receiveDriverUpdateChan //Ads information from elevator (driver)
-	elevators[localElevatorIndex] = CheckForInternalOrderBackup(elevators[localElevatorIndex])
-
+	elevators[localElevatorIndex] = <- receiveDriverUpdateChan 
 
 	updateDriverChan <- elevators[localElevatorIndex]
 
 	fmt.Println("QueueHandler initiated.")
 
-	
+
 
 	for{
 		time.Sleep(time.Millisecond * 1)
+
 		select{
-<<<<<<< HEAD
-<<<<<<< HEAD
-		case localOrder := <- localOrderChan: 
-=======
-=======
->>>>>>> FETCH_HEAD
-		//receiving updates from other module
-		case localOrder := <- localOrderChan: //recieves local orders from driver, imedeatly insert localy and send update
->>>>>>> FETCH_HEAD
+		
+		case localOrder := <- localOrderChan:
 			fmt.Println("localOrders")
 			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
 				if localOrder.Orientation == ORDER_INTERNAL{
 					elevators[localElevatorIndex] = InsertOrder(elevators[localElevatorIndex], localOrder)
-<<<<<<< HEAD
-<<<<<<< HEAD
-					localUpdateDriverChan <- elevators[localElevatorIndex]
-=======
 					//localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
->>>>>>> FETCH_HEAD
-=======
-					//localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
->>>>>>> FETCH_HEAD
 				}else{
 					orderToNetworkChan <- localOrder
 				}
@@ -377,10 +295,33 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 
 		case receivedCostMap := <- recieveCostChan:
 			//fmt.Println("RecievedCost")
-			best := FindBestCost(receivedCostMap)
-			if best.Ip == elevators[localElevatorIndex].Ip &&  IsNotInElevator(elevators[localElevatorIndex], best.Order){
+			best := Cost{}
+			best.Cost = 20
+			for _, recievedCost :=  range receivedCostMap{
+				if recievedCost.Cost < best.Cost{
+					best = recievedCost
+				}
+			}
+
+			highestIp := 0 //strconv.Atoi(dummyIpStr)
+			newIp := 0
+			for _,recievedCost := range receivedCostMap{
+				if recievedCost.Cost == best.Cost{
+					dummyIpStr := strings.Trim(strings.SplitAfter(recievedCost.Ip, "187")[1], ".")
+					newIp, _ = strconv.Atoi(dummyIpStr)
+					fmt.Println(newIp, highestIp)
+					if newIp > highestIp{
+						highestIp = newIp
+						best = recievedCost
+					}
+				}
+			}
+			fmt.Println("The best IP is: ", best.Ip)
+			if best.Ip == elevators[localElevatorIndex].Ip &&  IsNotInElevator(elevators[localElevatorIndex], best.Order){ //Map er ikke sortert, så heiser velger forskjellig og tar samme ordre
+				InsertOrder(elevators[localElevatorIndex], best.Order)
 				updateNetworkChan <- elevators[localElevatorIndex]
 			}
+
 
 		case changedElevator := <- changedElevatorChan:
 			//fmt.Println("ChangedElevator")
@@ -388,25 +329,17 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				if changedElevator.Type == "new"{
 					fmt.Println("NEW elevator: ", changedElevator.Ip )
 					if changedElevator.Ip != localIp{
-						elevators = HandleNewElevator(elevators, changedElevator.Ip)
-					}
+					elevators = HandleNewElevator(elevators, changedElevator.Ip)
+				}
 				}else if changedElevator.Type == "dead"{
 					fmt.Println("DEAD elevator: ", changedElevator.Ip )
 					elevators = HandleDeadElev(elevators, changedElevator.Ip, deadOrderToUDPChan)
 				}
 			}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-		case elevators[localElevatorIndex] = <- receiveDriverUpdateChan:
-
-		case updateElevatorFromNetwork := <- receiveElevatorChan:
-=======
-=======
->>>>>>> FETCH_HEAD
 		case updateElevatorFromNetwork := <- receiveElevatorChan: // Recieves updates from all-over, updates accordingly
->>>>>>> FETCH_HEAD
 			//fmt.Println("RecievedElevator")
+			//fmt.Println(updateElevator.Ip, updateElevator.OrderQueue[0])
 			if updateElevatorFromNetwork.Ip != localIp{
 				for i := 0; i < N_ELEVATORS; i++{
 					if elevators[i].Ip == updateElevatorFromNetwork.Ip{
@@ -415,51 +348,19 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 					}
 				}
 			}
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-		case <- timedUpdateChanNetwork:
-		//fmt.Println("timedUpdateChanNetwork")
-			updateNetworkChan <- elevators[localElevatorIndex]
-			UpdateInternalOrderBackupFile(elevators[localElevatorIndex])
-=======
->>>>>>> FETCH_HEAD
-=======
->>>>>>> FETCH_HEAD
 
 		//Updating the other module
 		case elevators[localElevatorIndex] = <- updateFromDriverChan:
 			//fmt.Println("timedUpdateChanDriver")
-<<<<<<< HEAD
-<<<<<<< HEAD
-			updateDriverChan <- elevators[localElevatorIndex]
+			updateFromDriverChan <- elevators[localElevatorIndex]
 
-		case <- timedLightUpdate:
-			//fmt.Println("timedLg")
-			timedLightUpdate <- elevators
-		}
-=======
-			updateFromDriverChan <- elevators[localElevatorIndex]
-			
 		case <- readyForUpdateChan: // Timed update to network
 			//fmt.Println("timedUpdate")
 			updateNetworkChan <- elevators[localElevatorIndex]
 			timedLightUpdate <- elevators
 			updateDriverChan <- elevators[localElevatorIndex]
 			go func(elevator Elevator){UpdateInternalOrderBackupFile(elevator)}(elevators[localElevatorIndex])
-		
->>>>>>> FETCH_HEAD
-=======
-			updateFromDriverChan <- elevators[localElevatorIndex]
-			
-		case <- readyForUpdateChan: // Timed update to network
-			//fmt.Println("timedUpdate")
-			updateNetworkChan <- elevators[localElevatorIndex]
-			timedLightUpdate <- elevators
-			updateDriverChan <- elevators[localElevatorIndex]
-			go func(elevator Elevator){UpdateInternalOrderBackupFile(elevator)}(elevators[localElevatorIndex])
-		
->>>>>>> FETCH_HEAD
+
 	}
 }
 }
