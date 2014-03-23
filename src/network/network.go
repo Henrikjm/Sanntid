@@ -35,7 +35,7 @@ func ImAliveUDP() {
 	CheckError(err, "ERROR while dialing")
 	msg := "ImAlive!"
 	for {
-		time.Sleep(time.Millisecond*5)
+		time.Sleep(time.Millisecond*100)
 		conn.Write([]byte(msg))
 	}
 }
@@ -50,11 +50,11 @@ func RecieveAliveUDP(aliveChan chan string){
 		ip := strings.Trim(strings.SplitAfter(addr.String(), ":")[0], ":")
 		aliveChan <- ip
 	}
-
 }
 
 
-func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requestAliveChan chan map[string]time.Time, updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
+func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requestAliveChan chan map[string]time.Time,
+ updateForConfirmationChan chan map[string]time.Time, updateForCostChan chan map[string]time.Time) {
 	fmt.Println("UpdateAliveUDP Started")
 	go ImAliveUDP()
 	go RecieveAliveUDP(aliveChan)
@@ -83,14 +83,11 @@ func UpdateAliveUDP(aliveChan chan string, changedElevatorChan chan Change, requ
 						delete(aliveMap, ip)
 						changedElevatorChan <- Change{"dead", ip}
 					}
-					
 				}
-				
 		}
 	}
 
 }
-
 
 func GetLocalIp() string {
 	conn, err := net.Dial("udp4", "google.com:80")
@@ -107,22 +104,20 @@ func LocalIpSender(localIpChan chan string){
 	}
 }
 
-
 func RecieveOrderFromUDP(newOrderFromUDPChan chan Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time) { //Må beregne cost og sende ut
 	conn := MakeListenerConn(ORDERPORT, "RecieveOrderFromUDP")
 	sender := MakeSenderConn(ORDERCONFIRMATIONPORT)
 	data := make([]byte, 1024)
 	costConn := MakeListenerConn(COSTPORT, "RecieveCost")
-
 	for {
 		time.Sleep(time.Millisecond * 1)
-		n, _, err := conn.ReadFromUDP(data) 	
 
+		n, _, err := conn.ReadFromUDP(data) 	
 		CheckError(err, "ERROR ReadFromUDP")
 		sender.Write([]byte("OrderRecieved"))
+
 		var newOrder Order
 		json.Unmarshal(data[:n], &newOrder)
-		
 		fmt.Println("Recieved order over UDP:      ", newOrder)
 			go func (newOrder Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time, conn *net.UDPConn){ //Må hente cost "indiciduelt..."
 				newOrderFromUDPChan <- newOrder //videresend ordre til costevaluering
@@ -133,7 +128,6 @@ func RecieveOrderFromUDP(newOrderFromUDPChan chan Order, recieveCostChan chan ma
 	}
 }
 
-
 func SendOrderToUDP(orderToNetworkChan chan Order, deadOrderToUDPChan chan Order, costChan chan map[string]Cost, updateForConfirmationChan chan map[string]time.Time){//IKKE FERDIG
 	conn := MakeSenderConn(ORDERPORT)
 	var order Order
@@ -143,10 +137,9 @@ func SendOrderToUDP(orderToNetworkChan chan Order, deadOrderToUDPChan chan Order
 
 			case order = <- deadOrderToUDPChan:
 		}
-		
 		orderB,_ := json.Marshal(order)
 		conn.Write([]byte(orderB))	
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 150)
 		}
 }
 
@@ -161,13 +154,12 @@ func SendCost(sendCostChan chan Cost) {
 		go func(sender *net.UDPConn, costB []byte){
 			fmt.Println("Started sending cost")
 			for i := 0; i < 10; i++ {
-				time.Sleep(time.Millisecond * 10)
+				time.Sleep(time.Millisecond * 50)
 				sender.Write(costB)
 			}
 		}(sender, costB)
 	}
 }
-
 
 func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCostChan chan map[string]time.Time, conn *net.UDPConn) bool{ //Lag et map sortert på ordre og lytt til
 	
@@ -175,7 +167,6 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 	costMap := make(map[string]Cost)
 	data := make([]byte, 1024)
 	var costInstance Cost
-
 
 	updateForCostChan <- aliveMap
 	aliveMap = <- updateForCostChan
@@ -206,7 +197,6 @@ func RecieveCost(order Order, recieveCostChan chan map[string]Cost, updateForCos
 				return true
 			}
 		}
-
 
 		if (time.Now().Sub(t0) > 1000000000){
 			fmt.Println("Cost listen timed out.")
@@ -241,11 +231,9 @@ func RecieveOrderConfirmation(order Order, orderConfirmationChan chan bool, upda
 	confirmationMap := make(map[string]time.Time)
 	aliveMap := make(map[string]time.Time)
 	
-	
 	updateForConfirmationChan<-aliveMap
 	aliveMap = <- updateForConfirmationChan
 	t0 := time.Now() 
-	
 	
 	for{
 		time.Sleep(time.Millisecond * 1)
@@ -281,7 +269,6 @@ func RecieveElevator(receiveElevatorChan chan Elevator){
 	data := make([]byte, 1024)
 
 	var newElevator Elevator
-	
 	for{
 		time.Sleep(time.Millisecond * 1)
 		n,_,err := conn.ReadFromUDP(data)
@@ -297,7 +284,6 @@ func NetworkHandler(localIpChan chan string, changedElevatorChan chan Change, se
 	deadOrderToUDPChan chan Order, costChan chan map[string]Cost, updateNetworkChan chan Elevator,
 	 receiveElevatorChan chan Elevator){
 
-
 	fmt.Println("NetworkHandler Started...")
 	exitChan :=make(chan string)
 	aliveChan := make(chan string)
@@ -310,11 +296,8 @@ func NetworkHandler(localIpChan chan string, changedElevatorChan chan Change, se
 	go UpdateAliveUDP(aliveChan, changedElevatorChan, requestAliveChan, updateForConfirmationChan, updateForCostChan)
 	go SendOrderToUDP(orderToNetworkChan, deadOrderToUDPChan, costChan, updateForConfirmationChan)
 	go RecieveOrderFromUDP(newOrderFromUDPChan, recieveCostChan, updateForCostChan)
-	
 	go SendElevator(updateNetworkChan)
 	go RecieveElevator(receiveElevatorChan)
 
-	
 	<- exitChan
-	 
 }

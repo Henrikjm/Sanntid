@@ -248,7 +248,7 @@ func UpdateInternalOrderBackupFile(elevator Elevator){
 
 func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elevator, newOrderFromUDPChan chan Order, deadOrderToUDPChan chan Order, sendCostChan chan Cost, recieveCostChan chan map[string]Cost, 
 	changedElevatorChan chan Change, localIpChan chan string, localOrderChan chan Order, updateDriverChan chan Elevator, receiveDriverUpdateChan chan Elevator, orderToNetworkChan chan Order,
-	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool){
+	 updateFloorChan chan int, timedLightUpdate chan []Elevator, localUpdateDriverChan chan Elevator, updateFromDriverChan chan Elevator, readyForUpdateChan chan bool, updateDirectionLastFloorChan chan Elevator){
 
 	fmt.Println("QueueHandler started.")	
 
@@ -275,25 +275,26 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 
 		select{
 		
+		case dummyElevator := <- updateDirectionLastFloorChan:
+			elevators[localElevatorIndex].LastFloor = dummyElevator.LastFloor
+			elevators[localElevatorIndex].Direction = dummyElevator.Direction
+
 		case localOrder := <- localOrderChan:
 			fmt.Println("localOrders")
 			if IsNotInElevator(elevators[localElevatorIndex], localOrder){
 				if localOrder.Orientation == ORDER_INTERNAL{
 					elevators[localElevatorIndex] = InsertOrder(elevators[localElevatorIndex], localOrder)
-					//localUpdateDriverChan <- elevators[localElevatorIndex] //Bør legge inn localUpdate i control
 				}else{
 					orderToNetworkChan <- localOrder
 				}
 			}		
 
 		case newOrder := <-newOrderFromUDPChan:
-			//fmt.Println("RecievedNewOrder")
 			localCost := Cost{GetElevatorCost(elevators[localElevatorIndex], newOrder,  updateFloorChan), newOrder, elevators[localElevatorIndex].Ip}
 			sendCostChan <- localCost
 
 
 		case receivedCostMap := <- recieveCostChan:
-			//fmt.Println("RecievedCost")
 			best := Cost{}
 			best.Cost = 20
 			for _, recievedCost :=  range receivedCostMap{
@@ -302,7 +303,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 
-			highestIp := 0 //strconv.Atoi(dummyIpStr)
+			highestIp := 0 
 			newIp := 0
 			for _,recievedCost := range receivedCostMap{
 				if recievedCost.Cost == best.Cost{
@@ -316,14 +317,13 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 			fmt.Println("The best IP is: ", best.Ip)
-			if best.Ip == elevators[localElevatorIndex].Ip &&  IsNotInElevator(elevators[localElevatorIndex], best.Order){ //Map er ikke sortert, så heiser velger forskjellig og tar samme ordre
+			if best.Ip == elevators[localElevatorIndex].Ip &&  IsNotInElevator(elevators[localElevatorIndex], best.Order){ 
 				InsertOrder(elevators[localElevatorIndex], best.Order)
 				updateNetworkChan <- elevators[localElevatorIndex]
 			}
 
 
 		case changedElevator := <- changedElevatorChan:
-			//fmt.Println("ChangedElevator")
 			if localElevatorIndex == 0{
 				if changedElevator.Type == "new"{
 					fmt.Println("NEW elevator: ", changedElevator.Ip )
@@ -336,9 +336,7 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 
-		case updateElevatorFromNetwork := <- receiveElevatorChan: // Recieves updates from all-over, updates accordingly
-			//fmt.Println("RecievedElevator")
-			//fmt.Println(updateElevator.Ip, updateElevator.OrderQueue[0])
+		case updateElevatorFromNetwork := <- receiveElevatorChan:
 			if updateElevatorFromNetwork.Ip != localIp{
 				for i := 0; i < N_ELEVATORS; i++{
 					if elevators[i].Ip == updateElevatorFromNetwork.Ip{
@@ -348,13 +346,11 @@ func QueueHandler(receiveElevatorChan chan Elevator, updateNetworkChan chan Elev
 				}
 			}
 
-		//Updating the other module
+
 		case elevators[localElevatorIndex] = <- updateFromDriverChan:
-			//fmt.Println("timedUpdateChanDriver")
 			updateFromDriverChan <- elevators[localElevatorIndex]
 
-		case <- readyForUpdateChan: // Timed update to network
-			//fmt.Println("timedUpdate")
+		case <- readyForUpdateChan:
 			updateNetworkChan <- elevators[localElevatorIndex]
 			timedLightUpdate <- elevators
 			updateDriverChan <- elevators[localElevatorIndex]
