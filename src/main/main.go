@@ -46,8 +46,9 @@ updateDriverChan := make(chan Elevator)
 updateFloorChan := make(chan int)
 timedLightUpdate := make(chan []Elevator)
 localUpdateDriverChan := make(chan Elevator)
-updateFromDriverChan := make(chan Elevator)
-readyForUpdateChan := make(chan bool)
+	
+
+
 costChan := make(chan map[string]Cost)
 
  	
@@ -55,9 +56,9 @@ costChan := make(chan map[string]Cost)
 
 
 
-go driver.ControlHandler(localOrderChan, updateDriverChan, receiveDriverUpdateChan, updateFloorChan, timedLightUpdate, localUpdateDriverChan, updateFromDriverChan, readyForUpdateChan)
+go driver.ControlHandler(localOrderChan, updateDriverChan, receiveDriverUpdateChan, updateFloorChan, timedLightUpdate, localUpdateDriverChan)
 go queue.QueueHandler(receiveElevatorChan, updateNetworkChan, newOrderFromUDPChan, deadOrderToUDPChan, sendCostChan, recieveCostChan, 
-	changedElevatorChan, localIpChan , localOrderChan, updateDriverChan, receiveDriverUpdateChan, orderToNetworkChan, updateFloorChan, timedLightUpdate, localUpdateDriverChan, updateFromDriverChan, readyForUpdateChan)
+	changedElevatorChan, localIpChan , localOrderChan, updateDriverChan, receiveDriverUpdateChan, orderToNetworkChan, updateFloorChan, timedLightUpdate, localUpdateDriverChan)
 
 go network.NetworkHandler(localIpChan, changedElevatorChan, sendCostChan, newOrderFromUDPChan, recieveCostChan, orderToNetworkChan, deadOrderToUDPChan,
  costChan, updateNetworkChan, receiveElevatorChan)
