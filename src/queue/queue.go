@@ -22,7 +22,7 @@ func GetElevatorCost(elevator Elevator, order Order, updateFloorChan chan int) i
 
 	score := 0
 	//correct direction plays 5 points difference
-	if elevator.Direction == MOVE_STOP{
+	if elevator.Direction == MOVE_STOP && elevator.OrderQueue[0].Floor == 0{
 		score += GetNumberOfFloorsForOrder(updateFloorChan, order)
 
 	}else if ((elevator.Direction == MOVE_UP) && (order.Floor > elevator.LastFloor)) || ((elevator.Direction == MOVE_DOWN) && (order.Floor < elevator.LastFloor)){ //hvis bestilling er i riktig retning
@@ -120,6 +120,7 @@ func GetInsertOrderPriority(elevator Elevator, order Order) int{
 
 func InsertOrder(elevator Elevator, order Order) Elevator{
 	fmt.Println("|||||||||||||Inserting order||||||||||")
+	fmt.Println(elevator)
 	if order.Floor == 0{
 		fmt.Println("ERROR in InsertOrder: order.Floor == 0")
 		return elevator
